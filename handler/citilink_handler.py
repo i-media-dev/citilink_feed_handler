@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime as dt, timedelta
 from pathlib import Path
 from collections import defaultdict
-from statistics import median
+import numpy as np
 from handler.constants import (
     DECIMAL_ROUNDING,
     FEEDS_FOLDER,
@@ -14,7 +14,7 @@ from handler.constants import (
 from handler.decorators import time_of_function
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
-from handler.utils import clear_max, clear_min
+from handler.utils import clear_avg, clear_max, clear_median, clear_min
 
 setup_logging()
 
@@ -209,11 +209,13 @@ class XMLHandler:
             all_categories = {}
 
             for category in root.findall('.//category'):
+                category_name = category.text
                 category_id = category.get('id')
                 parent_id = category.get('parentId')
                 all_categories[category_id] = parent_id
                 category_data[category_id] = {
                     'prices': [],
+                    'category_name': category_name,
                     'offers_count': 0
                 }
 
@@ -223,7 +225,10 @@ class XMLHandler:
                 if category_id and price:
                     if category_id not in category_data:
                         category_data[category_id] = {
-                            'prices': [], 'offers_count': 0}
+                            'prices': [],
+                            'category_name': '',
+                            'offers_count': 0
+                        }
                     category_data[category_id]['prices'].append(int(price))
                     category_data[category_id]['offers_count'] += 1
 
@@ -251,10 +256,12 @@ class XMLHandler:
                 count_offers = data['offers_count']
                 price_list = data['prices']
                 parent_id = all_categories.get(category_id)
+                category_name = data['category_name']
 
                 result.append({
                     'date': date_str,
                     'feed_name': file_name,
+                    'category_name': category_name,
                     'category_id': category_id,
                     'parent_id': parent_id,
                     'count_offers': count_offers,
@@ -267,15 +274,19 @@ class XMLHandler:
                     'avg_price': round(
                         sum(price_list) / len(price_list), DECIMAL_ROUNDING
                     ) if price_list else 0,
+                    'clear_avg_price': clear_avg(price_list)
+                    if price_list else 0,
                     'median_price': round(
-                        median(price_list), DECIMAL_ROUNDING
-                    ) if price_list else 0
+                        np.median(price_list), DECIMAL_ROUNDING
+                    ) if price_list else 0,
+                    'clear_median_price': clear_median(price_list)
+                    if price_list else 0
                 })
         return result
 
     def save_to_json(
         self,
-        data: list,
+        data: list[dict],
         prefix: str = 'offers_report',
         folder: str = 'data'
     ) -> None:

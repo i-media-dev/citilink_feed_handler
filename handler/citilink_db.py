@@ -1,6 +1,12 @@
 import logging
 
-from handler.constants import CREATE_LOGS_TABLE, NAME_OF_SHOP, INSERT_LOGS
+from handler.constants import (
+    CREATE_CATALOG_TABLE,
+    CREATE_REPORTS_TABLE,
+    NAME_OF_SHOP,
+    INSERT_CATALOG,
+    INSERT_REPORT
+)
 from handler.decorators import connection_db
 from handler.exceptions import TableNameError
 from handler.logging_config import setup_logging
@@ -24,25 +30,45 @@ class XMLDataBase:
         return [table[0] for table in cursor.fetchall()]
 
     @connection_db
-    def _create_table_if_not_exists(self, cursor=None) -> str:
+    def _create_table_if_not_exists(
+        self,
+        prefix,
+        sql_pattern,
+        cursor=None
+    ) -> str:
         """
         Защищенный метод, создает таблицу в базе данных, если ее не существует.
         Если таблица есть в базе данных - возварщает ее имя.
         """
-        table_name = f'test_report_offers_{self.shop_name}'
+        table_name = f'{prefix}_{self.shop_name}'
         if table_name in self._allowed_tables():
             logging.info(f'Таблица {table_name} найдена в базе')
             return table_name
-        create_table_query = CREATE_LOGS_TABLE.format(table_name=table_name)
+        create_table_query = sql_pattern.format(table_name=table_name)
         cursor.execute(create_table_query)
         logging.info(f'Таблица {table_name} успешно создана')
         return table_name
 
-    @connection_db
-    def insert_data(self, data, cursor=None) -> None:
-        """Метод наполняет данными таблицу базы данных."""
-        table_name = self._create_table_if_not_exists()
-        query = INSERT_LOGS.format(table_name=table_name)
+    def insert_catalog(self, data):
+        table_name = self._create_table_if_not_exists(
+            'catalog_categories',
+            CREATE_CATALOG_TABLE
+        )
+        query = INSERT_CATALOG.format(table_name=table_name)
+        params = [
+            (
+                item['category_id'],
+                item['category_name']
+            ) for item in data
+        ]
+        return query, params
+
+    def insert_reports(self, data):
+        table_name = self._create_table_if_not_exists(
+            'reports_offers',
+            CREATE_REPORTS_TABLE
+        )
+        query = INSERT_REPORT.format(table_name=table_name)
         params = [
             (
                 item['date'],
@@ -55,9 +81,21 @@ class XMLDataBase:
                 item['max_price'],
                 item['clear_max_price'],
                 item['avg_price'],
-                item['median_price']
+                item['clear_avg_price'],
+                item['median_price'],
+                item['clear_median_price']
             ) for item in data
         ]
+        return query, params
+
+    @connection_db
+    def save_to_database(
+        self,
+        query_data: tuple,
+        cursor=None
+    ) -> None:
+        """Метод сохраняется обработанные данные в базу данных."""
+        query, params = query_data
         if isinstance(params, list):
             cursor.executemany(query, params)
         else:
@@ -65,7 +103,7 @@ class XMLDataBase:
         logging.info('✅ Данные успешно сохранены!')
 
     @connection_db
-    def clean_db(self, cursor=None, **tables: bool) -> None:
+    def clean_database(self, cursor=None, **tables: bool) -> None:
         """
         Метод очищает базу данных,
         не удаляя сами таблицы

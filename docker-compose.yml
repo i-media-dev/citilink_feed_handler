@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  wb_parser:
+    image: imediadev/citilink_feed_handler
+    env_file: .env
+    volumes:
+      - ./logs:/app/logs

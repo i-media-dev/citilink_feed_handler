@@ -5,9 +5,14 @@ from dotenv import load_dotenv
 import requests
 import xml.etree.ElementTree as ET
 
-from handler.logging_config import setup_logging
-from handler.exceptions import EmptyXMLError, InvalidXMLError
 from handler.constants import FEEDS_FOLDER
+from handler.exceptions import (
+    EmptyFeedsListError,
+    EmptyXMLError,
+    InvalidXMLError
+)
+from handler.feeds import FEEDS
+from handler.logging_config import setup_logging
 
 
 setup_logging()
@@ -22,20 +27,27 @@ class XMLSaver:
 
     def __init__(
         self,
-        feeds_list: list[str],
+        feeds_list: list[str] = FEEDS,
         feeds_folder: str = FEEDS_FOLDER
     ) -> None:
         if not feeds_list:
             logging.error('Не передан список фидов.')
-            raise ValueError('List of feeds is required.')
+            raise EmptyFeedsListError('List of feeds is required.')
 
         self.feeds_list = feeds_list
         self.feeds_folder = feeds_folder
 
+    def _make_dir(self):
+        """Защищенный метод, создает директорию."""
+        folder_path = Path(__file__).parent.parent / self.feeds_folder
+        logging.debug(f'Путь к файлу: {folder_path}')
+        folder_path.mkdir(parents=True, exist_ok=True)
+        return folder_path
+
     def _get_file(self, feed: str):
         """Защищенный метод, получает фид по ссылке."""
         try:
-            response = requests.get(feed)
+            response = requests.get(feed, stream=True, timeout=(10, 30))
 
             if response.status_code == requests.codes.ok:
                 return response
@@ -45,7 +57,8 @@ class XMLSaver:
                 password = os.getenv('XML_FEED_PASSWORD')
                 auth_response = requests.get(
                     feed,
-                    auth=(username, password)
+                    auth=(username, password),
+                    stream=True, timeout=(10, 30)
                 )
 
                 if auth_response.status_code == requests.codes.ok:
@@ -62,67 +75,79 @@ class XMLSaver:
         """Защищенный метод, формирующий имя xml-файлу."""
         return feed.split('/')[-1]
 
-    def _chek_syntax(self, str_feed):
-        """
-        Защищенный валидирующий метод,
-        проверяющий синтаксис полученного фида.
-        """
-        try:
-            ET.fromstring(str_feed)
-            return True
-        except ET.ParseError:
-            return False
+    def _indent(self, elem, level=0) -> None:
+        """Защищенный метод, расставляет правильные отступы в XML файлах."""
+        i = '\n' + level * '  '
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + '  '
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for child in elem:
+                self._indent(child, level + 1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
 
-    def _chek_empty(self, str_feed):
+    def _validate_xml(self, xml_content: bytes):
         """
-        Защищенный валидирующий метод,
-        проверяющий наполненность фида.
+        Валидирует XML: проверяет что не пустой и well-formed.
+        Возвращает декодированное содержимое и кодировку.
         """
-        return not bool(str_feed.strip())
-
-    def _validate_xml(self, str_feed):
-        """Суммирующий валидирующий защищенный метод."""
-        if self._chek_empty(str_feed):
+        if not xml_content.strip():
             raise EmptyXMLError('XML пуст')
-        if not self._chek_syntax(str_feed):
-            raise InvalidXMLError('XML содержит синтаксические ошибки')
+        encoding = 'utf-8'
         try:
-            root = ET.fromstring(str_feed)
-            if not list(root):
-                raise InvalidXMLError('XML содержит только корневой элемент')
+            declaration = xml_content[:100].decode('ascii', errors='ignore')
+            if 'encoding=' in declaration:
+                import re
+                match = re.search(r'encoding=[\'"]([^\'"]+)[\'"]', declaration)
+                if match:
+                    encoding = match.group(1).lower()
+        except Exception as e:
+            logging.warning(
+                f'Не удалось определить кодировку из декларации: {e}')
+        try:
+            decoded_content = xml_content.decode(encoding)
+        except UnicodeDecodeError:
+            try:
+                decoded_content = xml_content.decode('utf-8')
+                encoding = 'utf-8'
+            except UnicodeDecodeError:
+                raise InvalidXMLError('Не удалось декодировать XML')
+        try:
+            ET.fromstring(decoded_content)
         except ET.ParseError as e:
-            raise ValueError(f'Ошибка при анализе XML: {str(e)}')
+            raise InvalidXMLError(f'XML содержит синтаксические ошибки: {e}')
+        return decoded_content, encoding
 
     def save_xml(self) -> None:
-        """Метод, сохраняющий фиды в xml-файлы в директорию temp_feeds."""
+        """Метод, сохраняющий фиды в xml-файлы"""
         total_files: int = len(self.feeds_list)
         saved_files = 0
-        folder_path = Path(__file__).parent.parent / self.feeds_folder
-        folder_path.mkdir(parents=True, exist_ok=True)
+        folder_path = self._make_dir()
         for feed in self.feeds_list:
             file_name = self._get_filename(feed)
             file_path = folder_path / file_name
             response = self._get_file(feed)
-            encoding = response.text.split('>')[0].split('=')[-1].strip('?"\'')
-            logging.info(f'Кодировка XML-файла {file_name}: {encoding}')
-            logging.info(
-                'Автоматическое определение кодировки '
-                f'XML-фала {file_name}: {response.encoding}'
-            )
-
             if response is None:
                 logging.warning(f'XML-файл {file_name} не получен.')
                 continue
-            self._validate_xml(response.text)
-
             try:
+                xml_content = response.content
+                decoded_content, encoding = self._validate_xml(xml_content)
+                xml_tree = ET.fromstring(decoded_content)
+                self._indent(xml_tree)
+                tree = ET.ElementTree(xml_tree)
                 with open(file_path, 'wb') as file:
-                    for chunk in response.iter_content(
-                        chunk_size=8192
-                    ):
-                        file.write(chunk)
+                    tree.write(file, encoding=encoding, xml_declaration=True)
                 saved_files += 1
-            except IOError as e:
-                logging.error(f'Ошибка при записи файла {file_name}: {e}')
+                logging.info(f'Файл {file_name} успешно сохранен')
+            except (EmptyXMLError, InvalidXMLError) as e:
+                logging.error(f'Ошибка валидации XML {file_name}: {e}')
+            except Exception as e:
+                logging.error(f'Ошибка обработки файла {file_name}: {e}')
         logging.info(
             f'Успешно записано {saved_files} файлов из {total_files}.')

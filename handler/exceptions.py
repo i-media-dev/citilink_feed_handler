@@ -8,3 +8,7 @@ class InvalidXMLError(ValueError):
 
 class TableNameError(ValueError):
     pass
+
+
+class EmptyFeedsListError(ValueError):
+    pass
