@@ -58,7 +58,7 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        key: ${{ secrets.SSH_KEY }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "docker-compose.yml"
         target: "/home/egor/project/citilink/"
     - name: Executing remote ssh commands to deploy
@@ -67,7 +67,7 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        key: ${{ secrets.SSH_KEY }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /home/egor/project/citilink/
           docker compose -f docker-compose.yml pull
