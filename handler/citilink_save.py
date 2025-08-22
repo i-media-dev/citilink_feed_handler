@@ -1,19 +1,20 @@
 import logging
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 import requests
 import xml.etree.ElementTree as ET
 
 from handler.constants import FEEDS_FOLDER
 from handler.exceptions import (
+    DirectoryCreationError,
     EmptyFeedsListError,
     EmptyXMLError,
     InvalidXMLError
 )
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
-
 
 setup_logging()
 
@@ -39,10 +40,14 @@ class XMLSaver:
 
     def _make_dir(self):
         """Защищенный метод, создает директорию."""
-        folder_path = Path(__file__).parent.parent / self.feeds_folder
-        logging.debug(f'Путь к файлу: {folder_path}')
-        folder_path.mkdir(parents=True, exist_ok=True)
-        return folder_path
+        try:
+            folder_path = Path(__file__).parent.parent / self.feeds_folder
+            logging.debug(f'Путь к файлу: {folder_path}')
+            folder_path.mkdir(parents=True, exist_ok=True)
+            return folder_path
+        except Exception as e:
+            logging.error(f'Не удалось создать директорию по причине {e}')
+            raise DirectoryCreationError('Ошибка создания директории.')
 
     def _get_file(self, feed: str):
         """Защищенный метод, получает фид по ссылке."""

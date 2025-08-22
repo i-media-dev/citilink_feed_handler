@@ -28,7 +28,11 @@ CUSTOM_LABEL = {'asia': {
     'id': ['2043409']
 }, 'computer': {
     'name': ['IVIGO', 'Сетевые'],
-    'url': ['product/ultrabuk-msi-summit-e13-flip-evo-a13mt-243us-i7-1360p-16gb-ssd1tb-13-4-2043424/?referrer=reattribution%3D1&amp;utm_term=split'],
+    'url': [
+        'product/ultrabuk-msi-summit-e13-flip-evo-a13mt-243us-i7-1360p-'
+        '16gb-ssd1tb-13-4-2043424/?referrer=reattribution'
+        '%3D1&amp;utm_term=split'
+    ],
     'id': ['1860372']
 }}
 """Данные для вставки в оффер."""

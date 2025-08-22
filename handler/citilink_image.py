@@ -1,11 +1,13 @@
 from io import BytesIO
 import logging
 from pathlib import Path
+
 from PIL import Image
 import requests
 import xml.etree.ElementTree as ET
 
 from handler.constants import FEEDS_FOLDER, IMAGE_FOLDER, NEW_IMAGE_FOLDER
+from handler.exceptions import DirectoryCreationError
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
 
@@ -42,12 +44,16 @@ class XMLImage:
         logging.debug(f'Путь к файлу: {file_path}')
         return ET.parse(file_path)
 
-    def _make_dir(self, image_folder) -> str:
+    def _make_dir(self) -> str:
         """Защищенный метод, создает директорию."""
-        folder_path = Path(__file__).parent.parent / image_folder
-        logging.debug(f'Путь к файлу: {folder_path}')
-        folder_path.mkdir(parents=True, exist_ok=True)
-        return folder_path
+        try:
+            folder_path = Path(__file__).parent.parent / self.image_folder
+            logging.debug(f'Путь к файлу: {folder_path}')
+            folder_path.mkdir(parents=True, exist_ok=True)
+            return folder_path
+        except Exception as e:
+            logging.error(f'Не удалось создать директорию по причине {e}')
+            raise DirectoryCreationError('Ошибка создания директории.')
 
     def _get_image_filename(self, offer_id: str, url: str) -> str:
         """Защищенный метод, создает имя файла с изображением."""
@@ -91,5 +97,5 @@ class XMLImage:
                     offer_id,
                     offer_image
                 )
-                folder_path = self._make_dir(self.image_folder)
+                folder_path = self._make_dir()
                 self._save_image(offer_image, folder_path, image_filename)

@@ -2,6 +2,7 @@ import logging
 import time
 
 import mysql.connector
+
 from handler.db_config import config
 from handler.logging_config import setup_logging
 

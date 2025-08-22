@@ -21,8 +21,9 @@ def calc_quantile(data):
     IQR = Q3 - Q1
     lower_outlier_threshold = Q1 - 1.5 * IQR
     upper_outlier_threshold = Q3 + 1.5 * IQR
-    filtered_data = array[(array >= lower_outlier_threshold) &
-                          (array <= upper_outlier_threshold)]
+    filtered_data = array[
+        (array >= lower_outlier_threshold) & (array <= upper_outlier_threshold)
+    ]
     return filtered_data.tolist()
 
 

@@ -12,3 +12,11 @@ class TableNameError(ValueError):
 
 class EmptyFeedsListError(ValueError):
     pass
+
+
+class DirectoryCreationError(ValueError):
+    pass
+
+
+class GetTreeError(ValueError):
+    pass

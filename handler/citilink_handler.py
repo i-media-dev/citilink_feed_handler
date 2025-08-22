@@ -5,13 +5,16 @@ import xml.etree.ElementTree as ET
 from datetime import datetime as dt, timedelta
 from pathlib import Path
 from collections import defaultdict
+
 import numpy as np
+
 from handler.constants import (
     DECIMAL_ROUNDING,
     FEEDS_FOLDER,
     PARSE_FEEDS_FOLDER
 )
 from handler.decorators import time_of_function
+from handler.exceptions import DirectoryCreationError, GetTreeError
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
 from handler.utils import clear_avg, clear_max, clear_median, clear_min
@@ -41,18 +44,26 @@ class XMLHandler:
 
     def _make_dir(self):
         """Защищенный метод, создает директорию."""
-        file_path = Path(__file__).parent.parent / self.new_feeds_folder
-        logging.debug(f'Путь к файлу: {file_path}')
-        file_path.mkdir(parents=True, exist_ok=True)
-        return file_path
+        try:
+            file_path = Path(__file__).parent.parent / self.new_feeds_folder
+            logging.debug(f'Путь к файлу: {file_path}')
+            file_path.mkdir(parents=True, exist_ok=True)
+            return file_path
+        except Exception as e:
+            logging.error(f'Не удалось создать директорию по причине {e}')
+            raise DirectoryCreationError('Ошибка создания директории.')
 
     def _get_tree(self, file_name: str):
         """Защищенный метод, создает экземпляра класса ElementTree."""
-        file_path = (
-            Path(__file__).parent.parent / self.feeds_folder / file_name
-        )
-        logging.debug(f'Путь к файлу: {file_path}')
-        return ET.parse(file_path)
+        try:
+            file_path = (
+                Path(__file__).parent.parent / self.feeds_folder / file_name
+            )
+            logging.debug(f'Путь к файлу: {file_path}')
+            return ET.parse(file_path)
+        except Exception as e:
+            logging.error(f'Не удалось получить дерево фида по причине {e}')
+            raise GetTreeError('Ошибка получения дерева фида.')
 
     def _indent(self, elem, level=0) -> None:
         """Защищенный метод, расставляет правильные отступы в XML файлах."""
@@ -165,10 +176,11 @@ class XMLHandler:
                     if offer_id in offers_id_list:
                         offer.set('available', flag)
                     existing_nums = set()
-                    for el in offer.findall('*'):
-                        if el.tag.startswith('custom_label_'):
+                    for element in offer.findall('*'):
+                        if element.tag.startswith('custom_label_'):
                             try:
-                                existing_nums.add(int(el.tag.split('_')[-1]))
+                                existing_nums.add(
+                                    int(element.tag.split('_')[-1]))
                             except ValueError:
                                 continue
                     for label_name, conditions in custom_label.items():
