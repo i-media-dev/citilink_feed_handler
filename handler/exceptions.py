@@ -1,22 +1,22 @@
 class EmptyXMLError(ValueError):
-    pass
+    """Ошибка пустого XML-файла."""
 
 
 class InvalidXMLError(ValueError):
-    pass
+    """Ошибка невалидного XML-файла."""
 
 
 class TableNameError(ValueError):
-    pass
+    """Ошибка отсутствующей таблицы."""
 
 
 class EmptyFeedsListError(ValueError):
-    pass
+    """Ошибка пустой коллекции с фидами."""
 
 
 class DirectoryCreationError(ValueError):
-    pass
+    """Ошибка создания дериктории."""
 
 
 class GetTreeError(ValueError):
-    pass
+    """Ошибка получения дерева XML-файла."""

@@ -1,25 +1,25 @@
 import logging
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 import requests
 import xml.etree.ElementTree as ET
 
 from handler.constants import FEEDS_FOLDER
+from handler.decorators import time_of_function
 from handler.exceptions import (
-    DirectoryCreationError,
     EmptyFeedsListError,
     EmptyXMLError,
     InvalidXMLError
 )
 from handler.feeds import FEEDS
+from handler.mixins import FileMixin
 from handler.logging_config import setup_logging
 
 setup_logging()
 
 
-class XMLSaver:
+class XMLSaver(FileMixin):
     """
     Класс, предоставляющий интерфейс для скачивания,
     валидации и сохранения фида в xml-файл.
@@ -37,17 +37,6 @@ class XMLSaver:
 
         self.feeds_list = feeds_list
         self.feeds_folder = feeds_folder
-
-    def _make_dir(self):
-        """Защищенный метод, создает директорию."""
-        try:
-            folder_path = Path(__file__).parent.parent / self.feeds_folder
-            logging.debug(f'Путь к файлу: {folder_path}')
-            folder_path.mkdir(parents=True, exist_ok=True)
-            return folder_path
-        except Exception as e:
-            logging.error(f'Не удалось создать директорию по причине {e}')
-            raise DirectoryCreationError('Ошибка создания директории.')
 
     def _get_file(self, feed: str):
         """Защищенный метод, получает фид по ссылке."""
@@ -128,11 +117,12 @@ class XMLSaver:
             raise InvalidXMLError(f'XML содержит синтаксические ошибки: {e}')
         return decoded_content, encoding
 
+    @time_of_function
     def save_xml(self) -> None:
         """Метод, сохраняющий фиды в xml-файлы"""
         total_files: int = len(self.feeds_list)
         saved_files = 0
-        folder_path = self._make_dir()
+        folder_path = self._make_dir(self.feeds_folder)
         for feed in self.feeds_list:
             file_name = self._get_filename(feed)
             file_path = folder_path / file_name
@@ -152,7 +142,9 @@ class XMLSaver:
                 logging.info(f'Файл {file_name} успешно сохранен')
             except (EmptyXMLError, InvalidXMLError) as e:
                 logging.error(f'Ошибка валидации XML {file_name}: {e}')
+                continue
             except Exception as e:
                 logging.error(f'Ошибка обработки файла {file_name}: {e}')
+                continue
         logging.info(
             f'Успешно записано {saved_files} файлов из {total_files}.')

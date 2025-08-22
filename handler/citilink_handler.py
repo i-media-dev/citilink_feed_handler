@@ -3,7 +3,6 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime as dt, timedelta
-from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
@@ -14,15 +13,15 @@ from handler.constants import (
     PARSE_FEEDS_FOLDER
 )
 from handler.decorators import time_of_function
-from handler.exceptions import DirectoryCreationError, GetTreeError
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
-from handler.utils import clear_avg, clear_max, clear_median, clear_min
+from handler.mixins import FileMixin
+from handler.calculation import clear_avg, clear_max, clear_median, clear_min
 
 setup_logging()
 
 
-class XMLHandler:
+class XMLHandler(FileMixin):
     """
     Класс, предоставляющий интерфейс
     для обработки xml-файлов.
@@ -37,33 +36,6 @@ class XMLHandler:
         self.feeds_folder = feeds_folder
         self.new_feeds_folder = new_feeds_folder
         self.feeds_list = feeds_list
-
-    def _get_filenames_list(self):
-        """Защищенный метод, возвращает список названий фидов."""
-        return [feed.split('/')[-1] for feed in self.feeds_list]
-
-    def _make_dir(self):
-        """Защищенный метод, создает директорию."""
-        try:
-            file_path = Path(__file__).parent.parent / self.new_feeds_folder
-            logging.debug(f'Путь к файлу: {file_path}')
-            file_path.mkdir(parents=True, exist_ok=True)
-            return file_path
-        except Exception as e:
-            logging.error(f'Не удалось создать директорию по причине {e}')
-            raise DirectoryCreationError('Ошибка создания директории.')
-
-    def _get_tree(self, file_name: str):
-        """Защищенный метод, создает экземпляра класса ElementTree."""
-        try:
-            file_path = (
-                Path(__file__).parent.parent / self.feeds_folder / file_name
-            )
-            logging.debug(f'Путь к файлу: {file_path}')
-            return ET.parse(file_path)
-        except Exception as e:
-            logging.error(f'Не удалось получить дерево фида по причине {e}')
-            raise GetTreeError('Ошибка получения дерева фида.')
 
     def _indent(self, elem, level=0) -> None:
         """Защищенный метод, расставляет правильные отступы в XML файлах."""
@@ -91,8 +63,8 @@ class XMLHandler:
 
     def _super_feed(self):
         """Защищенный метод, создает шаблон фида с пустыми offers."""
-        file_names: list[str] = self._get_filenames_list()
-        first_file_tree = self._get_tree(file_names[0])
+        file_names: list[str] = self._get_filenames_list(self.feeds_list)
+        first_file_tree = self._get_tree(file_names[0], self.feeds_folder)
         root = first_file_tree.getroot()
         offers = root.find('.//offers')
         if offers is not None:
@@ -106,7 +78,7 @@ class XMLHandler:
         offer_counts: dict = defaultdict(int)
         all_offers = {}
         for file_name in file_names:
-            tree = self._get_tree(file_name)
+            tree = self._get_tree(file_name, self.feeds_folder)
             root = tree.getroot()
             for offer in root.findall('.//offer'):
                 offer_id = offer.get('id')
@@ -121,13 +93,15 @@ class XMLHandler:
         Метод, объединяющий все офферы в один фид
         по принципу inner join.
         """
-        file_names: list[str] = self._get_filenames_list()
+        file_names: list[str] = self._get_filenames_list(self.feeds_list)
         offer_counts, all_offers = self._collect_all_offers(file_names)
         root, offers = self._super_feed()
         for offer_id, count in offer_counts.items():
             if count == len(file_names):
                 offers.append(all_offers[offer_id])
-        output_path = self._make_dir() / 'inner_join_feed.xml'
+        output_path = self._make_dir(
+            self.new_feeds_folder
+        ) / 'inner_join_feed.xml'
         self._format_xml(root, output_path)
         logging.debug(f'Файл создан по адресу: {output_path}')
         return True
@@ -138,12 +112,14 @@ class XMLHandler:
         Метод, объединяющий все офферы в один фид
         по принципу full outer join.
         """
-        file_names: list[str] = self._get_filenames_list()
+        file_names: list[str] = self._get_filenames_list(self.feeds_list)
         _, all_offers = self._collect_all_offers(file_names)
         root, offers = self._super_feed()
         for offer in all_offers.values():
             offers.append(offer)
-        output_path = self._make_dir() / 'full_outer_join_feed.xml'
+        output_path = self._make_dir(
+            self.new_feeds_folder
+        ) / 'full_outer_join_feed.xml'
         self._format_xml(root, output_path)
         logging.debug(f'Файл создан по адресу: {output_path}')
         return True
@@ -160,8 +136,8 @@ class XMLHandler:
         из настраиваемого словаря CUSTOM_LABEL.
         """
         try:
-            for file_name in self._get_filenames_list():
-                tree = self._get_tree(file_name)
+            for file_name in self._get_filenames_list(self.feeds_list):
+                tree = self._get_tree(file_name, self.feeds_folder)
                 root = tree.getroot()
                 for offer in root.findall('.//offer'):
                     offer_name_text = offer.findtext('name')
@@ -201,7 +177,8 @@ class XMLHandler:
                             ET.SubElement(
                                 offer, f'custom_label_{next_num}'
                             ).text = label_name
-                output_path = self._make_dir() / f'new_{file_name}'
+                output_path = self._make_dir(
+                    self.new_feeds_folder) / f'new_{file_name}'
                 self._format_xml(root, output_path)
                 logging.debug(f'Файл записан по адресу: {output_path}')
             return True
@@ -209,13 +186,14 @@ class XMLHandler:
             logging.error(f'Произошла ошибка: {e}')
             return False
 
+    @time_of_function
     def get_offers_report(self) -> list[dict]:
         """Метод, формирующий отчет по офферам."""
         result = []
         date_str = (dt.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-        for file_name in self._get_filenames_list():
-            tree = self._get_tree(file_name)
+        for file_name in self._get_filenames_list(self.feeds_list):
+            tree = self._get_tree(file_name, self.feeds_folder)
             root = tree.getroot()
             category_data = {}
             all_categories = {}

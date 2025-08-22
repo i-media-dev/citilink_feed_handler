@@ -4,17 +4,17 @@ from pathlib import Path
 
 from PIL import Image
 import requests
-import xml.etree.ElementTree as ET
 
 from handler.constants import FEEDS_FOLDER, IMAGE_FOLDER, NEW_IMAGE_FOLDER
-from handler.exceptions import DirectoryCreationError
+from handler.decorators import time_of_function
 from handler.feeds import FEEDS
+from handler.mixins import FileMixin
 from handler.logging_config import setup_logging
 
 setup_logging()
 
 
-class XMLImage:
+class XMLImage(FileMixin):
     """
     Класс, предоставляющий интерфейс
     для работы с изображениями.
@@ -31,29 +31,6 @@ class XMLImage:
         self.image_folder = image_folder
         self.new_image_folder = new_image_folder
         self.feeds_list = feeds_list
-
-    def _get_filenames_list(self) -> list[str]:
-        """Защищенный метод, возвращает список названий фидов."""
-        return [feed.split('/')[-1] for feed in self.feeds_list]
-
-    def _get_tree(self, file_name: str):
-        """Защищенный метод, создает экземпляра класса ElementTree."""
-        file_path = (
-            Path(__file__).parent.parent / self.feeds_folder / file_name
-        )
-        logging.debug(f'Путь к файлу: {file_path}')
-        return ET.parse(file_path)
-
-    def _make_dir(self) -> str:
-        """Защищенный метод, создает директорию."""
-        try:
-            folder_path = Path(__file__).parent.parent / self.image_folder
-            logging.debug(f'Путь к файлу: {folder_path}')
-            folder_path.mkdir(parents=True, exist_ok=True)
-            return folder_path
-        except Exception as e:
-            logging.error(f'Не удалось создать директорию по причине {e}')
-            raise DirectoryCreationError('Ошибка создания директории.')
 
     def _get_image_filename(self, offer_id: str, url: str) -> str:
         """Защищенный метод, создает имя файла с изображением."""
@@ -82,10 +59,11 @@ class XMLImage:
         except Exception as e:
             logging.error(f'Ошибка при обработке изображения {url}: {e}')
 
+    @time_of_function
     def get_images(self):
         """Метод получения и сохранения изображений из xml-файла."""
-        for file_name in self._get_filenames_list():
-            tree = self._get_tree(file_name)
+        for file_name in self._get_filenames_list(self.feeds_list):
+            tree = self._get_tree(file_name, self.feeds_folder)
             root = tree.getroot()
             for offer in root.findall('.//offer'):
                 offer_id = offer.get('id')
@@ -97,5 +75,5 @@ class XMLImage:
                     offer_id,
                     offer_image
                 )
-                folder_path = self._make_dir()
+                folder_path = self._make_dir(self.image_folder)
                 self._save_image(offer_image, folder_path, image_filename)

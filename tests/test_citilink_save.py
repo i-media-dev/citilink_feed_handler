@@ -26,7 +26,7 @@ def test_init_with_valid_feeds_list(sample_feeds, tmp_path):
 def test_make_dir_creates_directory(sample_feeds, tmp_path):
     """Тест создания директории."""
     saver = XMLSaver(feeds_list=sample_feeds, feeds_folder=str(tmp_path))
-    folder_path = saver._make_dir()
+    folder_path = saver._make_dir(str(tmp_path))
     assert folder_path.exists()
     assert folder_path == tmp_path
 
@@ -175,7 +175,7 @@ def test_save_xml_with_custom_folder(sample_feeds, tmp_path):
     """Тест работы с пользовательской папкой."""
     custom_folder = tmp_path / 'custom_feeds'
     saver = XMLSaver(feeds_list=sample_feeds, feeds_folder=str(custom_folder))
-    folder_path = saver._make_dir()
+    folder_path = saver._make_dir(str(custom_folder))
 
     assert folder_path == custom_folder
     assert custom_folder.exists()
