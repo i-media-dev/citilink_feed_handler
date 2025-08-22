@@ -1,5 +1,8 @@
 import logging
+import functools
 import time
+from http.client import IncompleteRead
+import requests
 
 import mysql.connector
 
@@ -70,3 +73,33 @@ def connection_db(func):
             cursor.close()
             connection.close()
     return wrapper
+
+
+def retry_on_network_error(max_attempts=3, delays=(2, 5, 10)):
+    """Декоратор для повторных попыток при сетевых ошибках"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempt = 0
+            last_exception = None
+
+            while attempt < max_attempts:
+                attempt += 1
+                try:
+                    return func(*args, **kwargs)
+                except (IncompleteRead, requests.exceptions.ConnectionError,
+                        requests.exceptions.ChunkedEncodingError) as e:
+                    last_exception = e
+                    if attempt < max_attempts:
+                        delay = delays[attempt - 1] if attempt - \
+                            1 < len(delays) else delays[-1]
+                        logging.warning(
+                            f'Попытка {attempt}/{max_attempts} неудачна, '
+                            f'повтор через {delay}сек: {e}')
+                        time.sleep(delay)
+                    else:
+                        logging.error(f'Все {max_attempts} попыток неудачны')
+                        raise last_exception
+            return None
+        return wrapper
+    return decorator

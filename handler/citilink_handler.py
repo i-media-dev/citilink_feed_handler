@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import xml.etree.ElementTree as ET
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt
 from collections import defaultdict
 
 import numpy as np
@@ -190,7 +190,7 @@ class XMLHandler(FileMixin):
     def get_offers_report(self) -> list[dict]:
         """Метод, формирующий отчет по офферам."""
         result = []
-        date_str = (dt.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        date_str = (dt.now()).strftime('%Y-%m-%d')
 
         for file_name in self._get_filenames_list(self.feeds_list):
             tree = self._get_tree(file_name, self.feeds_folder)
@@ -283,7 +283,7 @@ class XMLHandler(FileMixin):
         """Отладочный метод сохраняет данные в файл формата json."""
         logging.debug('Сохранение файла...')
         os.makedirs(folder, exist_ok=True)
-        date_str = (dt.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        date_str = (dt.now()).strftime('%Y-%m-%d')
         filename = os.path.join(folder, f'{prefix}_{date_str}.json')
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)

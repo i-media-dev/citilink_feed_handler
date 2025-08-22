@@ -2,11 +2,11 @@ import logging
 import os
 
 from dotenv import load_dotenv
+
 import requests
 import xml.etree.ElementTree as ET
-
 from handler.constants import FEEDS_FOLDER
-from handler.decorators import time_of_function
+from handler.decorators import time_of_function, retry_on_network_error
 from handler.exceptions import (
     EmptyFeedsListError,
     EmptyXMLError,
@@ -38,6 +38,7 @@ class XMLSaver(FileMixin):
         self.feeds_list = feeds_list
         self.feeds_folder = feeds_folder
 
+    @retry_on_network_error(max_attempts=3, delays=(2, 5, 10))
     def _get_file(self, feed: str):
         """Защищенный метод, получает фид по ссылке."""
         try:
