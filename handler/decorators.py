@@ -2,10 +2,10 @@ import logging
 import functools
 import time
 from http.client import IncompleteRead
+
 import requests
 
 import mysql.connector
-
 from handler.db_config import config
 from handler.exceptions import (
     DirectoryCreationError,
