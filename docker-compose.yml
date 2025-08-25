@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  wb_parser:
+  citilink_feed_handler:
     image: imediadev/citilink_feed_handler
     env_file: .env
     volumes:
