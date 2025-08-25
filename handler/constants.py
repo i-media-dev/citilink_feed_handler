@@ -1,14 +1,20 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 NAME_OF_SHOP = 'citilink'
 """Константа названия магазина."""
 
-FEEDS_FOLDER = 'temp_feeds'
+FEEDS_FOLDER = os.getenv('FEEDS_FOLDER', 'temp_feeds')
 """Константа стокового названия директорий."""
-PARSE_FEEDS_FOLDER = 'new_feeds'
+PARSE_FEEDS_FOLDER = os.getenv('PARSE_FEEDS_FOLDER', 'new_feeds')
 """Константа стокового названия директорий."""
 
-IMAGE_FOLDER = 'old_images'
+IMAGE_FOLDER = os.getenv('IMAGE_FOLDER', 'old_images')
 """Константа стокового названия директорий."""
-NEW_IMAGE_FOLDER = 'new_images'
+NEW_IMAGE_FOLDER = os.getenv('NEW_IMAGE_FOLDER', 'new_images')
 """Константа стокового названия директорий."""
 
 UPPER_OUTLIER_PERCENTILE = 0.75

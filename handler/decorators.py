@@ -7,9 +7,31 @@ import requests
 import mysql.connector
 
 from handler.db_config import config
+from handler.exceptions import (
+    DirectoryCreationError,
+    EmptyFeedsListError,
+    GetTreeError,
+    StructureXMLError
+)
 from handler.logging_config import setup_logging
 
 setup_logging()
+
+
+def time_of_script(func):
+    """Декортаор для измерения времени работы всего приложения."""
+    def wrapper():
+        start_time = time.time()
+        print('Функция main начала работу')
+        result = func()
+        execution_time = round(time.time() - start_time, 3)
+        print(
+            'Функция main завершила работу. '
+            f'Время выполнения - {execution_time} сек. '
+            f'или {round(execution_time / 60, 2)} мин.'
+        )
+        return result
+    return wrapper
 
 
 def time_of_function(func):
@@ -76,7 +98,7 @@ def connection_db(func):
 
 
 def retry_on_network_error(max_attempts=3, delays=(2, 5, 10)):
-    """Декоратор для повторных попыток при сетевых ошибках"""
+    """Декоратор для повторных попыток скачивания при сетевых ошибках."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -103,3 +125,26 @@ def retry_on_network_error(max_attempts=3, delays=(2, 5, 10)):
             return None
         return wrapper
     return decorator
+
+
+def try_except(func):
+    """Декоратор для обработки исключений."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except StructureXMLError:
+            logging.warning(
+                'Тег пуст или структура фида не соответствует ожидаемой.')
+            if func.__annotations__.get('return') == bool:
+                return False
+            raise
+        except (EmptyFeedsListError, GetTreeError, DirectoryCreationError):
+            logging.error(f'Критическая ошибка в методе {func.__name__}')
+            raise
+        except Exception as e:
+            logging.error(f'Возникла ошибка в методе {func.__name__}: {e}')
+            if func.__annotations__.get('return') == bool:
+                return False
+            raise
+    return wrapper

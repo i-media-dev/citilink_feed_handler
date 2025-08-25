@@ -20,3 +20,15 @@ class DirectoryCreationError(ValueError):
 
 class GetTreeError(ValueError):
     """Ошибка получения дерева XML-файла."""
+
+
+class SaveDataBaseError(ValueError):
+    """Ошибка сохранения данных в бд."""
+
+
+class CleanDataBaseError(ValueError):
+    """Ошибка удаления данных из бд."""
+
+
+class StructureXMLError(ValueError):
+    """Ошибка структуры XML-файла."""

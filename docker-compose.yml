@@ -6,3 +6,5 @@ services:
     env_file: .env
     volumes:
       - ./logs:/app/logs
+      - ./${FEEDS_FOLDER}:/app/${FEEDS_FOLDER}
+      - ./${PARSE_FEEDS_FOLDER}:/app/${PARSE_FEEDS_FOLDER}

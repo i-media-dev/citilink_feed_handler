@@ -2,7 +2,11 @@ import logging
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from handler.exceptions import DirectoryCreationError, GetTreeError
+from handler.exceptions import (
+    DirectoryCreationError,
+    EmptyFeedsListError,
+    GetTreeError
+)
 from handler.logging_config import setup_logging
 
 setup_logging()
@@ -19,7 +23,11 @@ class FileMixin:
 
     def _get_filenames_list(self, feeds_list: str) -> list[str]:
         """Защищенный метод, возвращает список названий фидов."""
-        return [feed.split('/')[-1] for feed in feeds_list]
+        feed_names = [feed.split('/')[-1] for feed in feeds_list]
+        if len(feed_names) < len(feeds_list):
+            logging.error('Список имен пуст или не полон.')
+            raise EmptyFeedsListError('Список имен пуст или не полон.')
+        return feed_names
 
     def _make_dir(self, folder_name: Path) -> Path:
         """Защищенный метод, создает директорию."""
@@ -33,7 +41,7 @@ class FileMixin:
             raise DirectoryCreationError('Ошибка создания директории.')
 
     def _get_tree(self, file_name: str, folder_name: Path) -> ET.ElementTree:
-        """Защищенный метод, создает экземпляра класса ElementTree."""
+        """Защищенный метод, создает экземпляр класса ElementTree."""
         try:
             file_path = (
                 Path(__file__).parent.parent / folder_name / file_name

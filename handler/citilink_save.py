@@ -33,7 +33,7 @@ class XMLSaver(FileMixin):
     ) -> None:
         if not feeds_list:
             logging.error('Не передан список фидов.')
-            raise EmptyFeedsListError('List of feeds is required.')
+            raise EmptyFeedsListError('Список фидов пуст.')
 
         self.feeds_list = feeds_list
         self.feeds_folder = feeds_folder
@@ -45,6 +45,7 @@ class XMLSaver(FileMixin):
             response = requests.get(feed, stream=True, timeout=(10, 30))
 
             if response.status_code == requests.codes.ok:
+                response.content
                 return response
 
             if response.status_code == requests.codes.unauthorized:
@@ -53,10 +54,12 @@ class XMLSaver(FileMixin):
                 auth_response = requests.get(
                     feed,
                     auth=(username, password),
-                    stream=True, timeout=(10, 30)
+                    stream=True,
+                    timeout=(10, 30)
                 )
 
                 if auth_response.status_code == requests.codes.ok:
+                    auth_response.content
                     return auth_response
                 else:
                     logging.error(

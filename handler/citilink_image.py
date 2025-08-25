@@ -43,7 +43,7 @@ class XMLImage(FileMixin):
         except Exception as e:
             print(f'Ошибка при обработке изображения {url}: {e}')
             logging.error(f'Ошибка при обработке изображения {url}: {e}')
-        return ''
+            return ''
 
     def _save_image(self, url: str, folder_path: Path, image_filename: str):
         """Защищенный метод, сохраняет изображение по указанному пути."""
