@@ -1,6 +1,7 @@
 import logging
 import functools
 import time
+from datetime import datetime as dt
 from http.client import IncompleteRead
 
 import requests
@@ -21,13 +22,13 @@ setup_logging()
 def time_of_script(func):
     """Декортаор для измерения времени работы всего приложения."""
     def wrapper():
+        print(f'Функция main начала работу в {dt.now().strftime("%H:%M:%S")}')
         start_time = time.time()
-        print('Функция main начала работу')
         result = func()
         execution_time = round(time.time() - start_time, 3)
         print(
-            'Функция main завершила работу. '
-            f'Время выполнения - {execution_time} сек. '
+            f'Функция main завершила работу в {dt.now().strftime("%H:%M:%S")}.'
+            f' Время выполнения - {execution_time} сек. '
             f'или {round(execution_time / 60, 2)} мин.'
         )
         return result
