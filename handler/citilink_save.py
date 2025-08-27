@@ -42,7 +42,7 @@ class XMLSaver(FileMixin):
     def _get_file(self, feed: str):
         """Защищенный метод, получает фид по ссылке."""
         try:
-            response = requests.get(feed, stream=True, timeout=(10, 30))
+            response = requests.get(feed, stream=True, timeout=(10, 60))
 
             if response.status_code == requests.codes.ok:
                 response.content
@@ -55,7 +55,7 @@ class XMLSaver(FileMixin):
                     feed,
                     auth=(username, password),
                     stream=True,
-                    timeout=(10, 30)
+                    timeout=(10, 60)
                 )
 
                 if auth_response.status_code == requests.codes.ok:
