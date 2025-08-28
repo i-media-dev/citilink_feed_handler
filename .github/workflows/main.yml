@@ -71,3 +71,13 @@ jobs:
         script: |
           cd /home/egor/project/citilink/
           docker compose -f docker-compose.yml pull
+  send_message:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+    - name: Send message
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: Деплой citilink_feed_handler успешно выполнен!
