@@ -81,5 +81,5 @@ jobs:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
         message: |
-          /deploy_success
-          Деплой citilink_feed_handler успешно выполнен!
+          DEPLOY citilink_feed_handler
+          ✅ Деплой citilink_feed_handler успешно выполнен!
