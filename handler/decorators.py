@@ -112,23 +112,44 @@ def connection_db(func):
     def wrapper(*args, **kwargs):
         connection = None
         cursor = None
-        try:
-            connection = mysql.connector.connect(**config)
-            cursor = connection.cursor()
-            kwargs['cursor'] = cursor
-            result = func(*args, **kwargs)
-            connection.commit()
-            return result
-        except Exception as e:
-            if connection:
-                connection.rollback()
-            logging.error(f'Ошибка в {func.__name__}: {str(e)}', exc_info=True)
-            raise
-        finally:
-            if cursor:
-                cursor.close()
-            if connection and connection.is_connected():
-                connection.close()
+        delay = 5
+        max_retries = 5
+
+        for attempt in range(max_retries):
+            try:
+                connection = mysql.connector.connect(**config)
+                cursor = connection.cursor()
+                kwargs['cursor'] = cursor
+                result = func(*args, **kwargs)
+                connection.commit()
+                return result
+            except (
+                mysql.connector.ConnectionTimeoutError,
+                mysql.connector.OperationalError
+            ) as e:
+                if attempt < max_retries - 1:
+                    logging.warning(
+                        f'Попытка {attempt + 1} не удалась, '
+                        f'повтор через {delay}с: {e}'
+                    )
+                    time.sleep(delay)
+                    continue
+                else:
+                    logging.error(
+                        f'Все {max_retries} попыток подключения не удались'
+                    )
+                    raise
+            except Exception as e:
+                if connection:
+                    connection.rollback()
+                logging.error(
+                    f'Ошибка в {func.__name__}: {str(e)}', exc_info=True)
+                raise
+            finally:
+                if cursor:
+                    cursor.close()
+                if connection and connection.is_connected():
+                    connection.close()
     return wrapper
 
 
