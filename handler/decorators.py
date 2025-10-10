@@ -4,16 +4,13 @@ import time
 from datetime import datetime as dt
 from http.client import IncompleteRead
 
+import mysql.connector
 import requests
 
-import mysql.connector
+from handler.constants import DATE_FORMAT, MAX_RETRIES, TIME_DELAY, TIME_FORMAT
 from handler.db_config import config
-from handler.exceptions import (
-    DirectoryCreationError,
-    EmptyFeedsListError,
-    GetTreeError,
-    StructureXMLError
-)
+from handler.exceptions import (DirectoryCreationError, EmptyFeedsListError,
+                                GetTreeError, StructureXMLError)
 from handler.logging_config import setup_logging
 
 setup_logging()
@@ -23,8 +20,8 @@ def time_of_script(func):
     """Декортаор для измерения времени работы всего приложения."""
     @functools.wraps(func)
     def wrapper():
-        date_str = dt.now().strftime('%Y-%m-%d')
-        time_str = dt.now().strftime('%H:%M:%S')
+        date_str = dt.now().strftime(DATE_FORMAT)
+        time_str = dt.now().strftime(TIME_FORMAT)
         run_id = str(int(time.time()))
         print(f'Функция main начала работу {date_str} в {time_str}')
         start_time = time.time()
@@ -33,7 +30,7 @@ def time_of_script(func):
             execution_time = round(time.time() - start_time, 3)
             print(
                 'Функция main завершила '
-                f'работу в {dt.now().strftime("%H:%M:%S")}.'
+                f'работу в {dt.now().strftime(TIME_FORMAT)}.'
                 f' Время выполнения - {execution_time} сек. '
                 f'или {round(execution_time / 60, 2)} мин.'
             )
@@ -48,7 +45,7 @@ def time_of_script(func):
             execution_time = round(time.time() - start_time, 3)
             print(
                 'Функция main завершилась '
-                f'с ошибкой в {dt.now().strftime("%H:%M:%S")}. '
+                f'с ошибкой в {dt.now().strftime(TIME_FORMAT)}. '
                 f'Время выполнения - {execution_time} сек. '
                 f'Ошибка: {e}'
             )
@@ -112,8 +109,8 @@ def connection_db(func):
     def wrapper(*args, **kwargs):
         connection = None
         cursor = None
-        delay = 5
-        max_retries = 5
+        delay = TIME_DELAY
+        max_retries = MAX_RETRIES
 
         for attempt in range(max_retries):
             try:
@@ -124,8 +121,8 @@ def connection_db(func):
                 connection.commit()
                 return result
             except (
-                mysql.connector.ConnectionTimeoutError,
-                mysql.connector.OperationalError
+                mysql.connector.errors.ConnectionTimeoutError,
+                mysql.connector.errors.OperationalError
             ) as e:
                 if attempt < max_retries - 1:
                     logging.warning(
