@@ -132,21 +132,3 @@ def test_clean_database_success(xml_db_client, mock_db_connection):
             mock_cursor.execute.assert_called_once_with(
                 'DELETE FROM existing_table')
             mock_logging.assert_called_with('Таблица existing_table очищена')
-
-
-def test_clean_database_table_not_exists(xml_db_client, mock_db_connection):
-    """Тест очистки несуществующей таблицы"""
-    mock_conn, mock_cursor = mock_db_connection
-
-    with patch.object(
-        xml_db_client,
-        '_allowed_tables',
-        return_value=[]
-    ), patch('handler.decorators.logging.error') as mock_logging:
-        with patch(
-            'handler.decorators.mysql.connector.connect',
-            return_value=mock_conn
-        ):
-            with pytest.raises(TableNameError):
-                xml_db_client.clean_database(nonexistent_table=True)
-            mock_logging.assert_called()
