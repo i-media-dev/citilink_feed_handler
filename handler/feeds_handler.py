@@ -267,7 +267,7 @@ class FeedHandler(FileMixin):
                     continue
 
                 for element in parent_physicals:
-                    element.attrib.pop('parentIdPhysical', None)
+                    element.attrib.pop(param, None)
                     deleted_params += 1
 
                 self._save_xml(root, self.new_feeds_folder, filename)
