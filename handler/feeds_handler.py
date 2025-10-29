@@ -7,7 +7,7 @@ import numpy as np
 
 from handler.calculation import clear_avg, clear_max, clear_median, clear_min
 from handler.constants import (DATE_FORMAT, DECIMAL_ROUNDING, FEEDS_FOLDER,
-                               NEW_PREFIX, PARSE_FEEDS_FOLDER)
+                               NEW_FEEDS_FOLDER, NEW_PREFIX)
 from handler.decorators import time_of_function, try_except
 from handler.exceptions import StructureXMLError
 from handler.feeds import FEEDS
@@ -26,7 +26,7 @@ class FeedHandler(FileMixin):
     def __init__(
         self,
         feeds_folder: str = FEEDS_FOLDER,
-        new_feeds_folder: str = PARSE_FEEDS_FOLDER,
+        new_feeds_folder: str = NEW_FEEDS_FOLDER,
         feeds_list: tuple[str, ...] = FEEDS
     ) -> None:
         self.feeds_folder = feeds_folder
