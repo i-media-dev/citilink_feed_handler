@@ -1,7 +1,6 @@
-from handler.feeds_handler import XMLHandler
-from handler.feeds_save import XMLSaver
-from handler.image_handler import XMLImage
-from handler.reports_db import XMLDataBase
+from handler.feeds_handler import FeedHandler
+from handler.feeds_save import FeedSaver
+from handler.reports_db import ReportDataBase
 
 
 def initialize_components() -> tuple:
@@ -18,15 +17,14 @@ def initialize_components() -> tuple:
     Returns:
         tuple: Кортеж с инициализированными компонентами.
     """
-    saver = XMLSaver()
-    handler = XMLHandler()
-    db_client = XMLDataBase()
-    image = XMLImage()
-    return saver, handler, db_client, image
+    saver = FeedSaver()
+    handler = FeedHandler()
+    db_client = ReportDataBase()
+    return saver, handler, db_client
 
 
 def save_to_database(
-    db_client: XMLDataBase,
+    db_client: ReportDataBase,
     data: list
 ) -> None:
     """

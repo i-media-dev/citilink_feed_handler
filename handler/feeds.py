@@ -1,5 +1,5 @@
 """Список ссылок на фиды."""
-FEEDS = [
+FEEDS = (
     'https://feeds-mic.s1.citilink.ru/context/context_msk_cl.xml',
     'https://feeds-mic.s1.citilink.ru/context/context_spb_cl.xml',
     'https://feeds-mic.s1.citilink.ru/context/context_vrzh_cl.xml',
@@ -20,6 +20,5 @@ FEEDS = [
     'https://feeds-mic.s1.citilink.ru/context/context_nvs_cl.xml',
     'https://feeds-mic.s1.citilink.ru/context/context_yar_cl.xml',
     'https://feeds-mic.s1.citilink.ru/context/context_stav_cl.xml',
-    'https://feeds-mic.s1.citilink.ru/ya_search/ya_search_msk_cl.xml',
-]
+)
 """Список ссылок на фиды для скачивания."""

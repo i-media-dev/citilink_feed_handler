@@ -4,6 +4,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+PARAM_FOR_DELETE = 'parentIdPhysical'
+
+NEW_PREFIX = 'retailmedia'
+
+TAGS_FOR_DELETE = ('url2', 'cpa', 'barcode')
+"""Теги на удаление."""
+
 DATE_FORMAT = '%Y-%m-%d'
 """Формат даты по умолчанию."""
 
