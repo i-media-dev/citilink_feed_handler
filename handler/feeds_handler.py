@@ -273,14 +273,13 @@ class FeedHandler(FileMixin):
                 logging.info(
                     '\nПараметр - %s'
                     '\nВсего найдено параметров в фиде %s - %s'
-                    '\nВсего удалено параметров - %s'
+                    '\nВсего удалено параметров - %s',
                     param,
                     filename,
                     len(parent_physicals),
                     deleted_params,
                 )
                 deleted_params = 0
-                none_params = 0
         except Exception as error:
             logging.error('Неизвестная ошибка: %s', error)
             raise
