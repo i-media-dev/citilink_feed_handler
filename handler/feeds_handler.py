@@ -254,7 +254,6 @@ class FeedHandler(FileMixin):
 
     def delete_param(self, param):
         deleted_params = 0
-        none_params = 0
         filenames: list[str] = self._get_filenames_list(self.new_feeds_folder)
         try:
             for filename in filenames:
@@ -275,12 +274,10 @@ class FeedHandler(FileMixin):
                     '\nПараметр - %s'
                     '\nВсего найдено параметров в фиде %s - %s'
                     '\nВсего удалено параметров - %s'
-                    '\nВсего отсутствовавших параметров - %s',
                     param,
                     filename,
                     len(parent_physicals),
                     deleted_params,
-                    none_params
                 )
                 deleted_params = 0
                 none_params = 0
