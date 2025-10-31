@@ -262,7 +262,7 @@ class FeedHandler(FileMixin):
                 parent_physicals = root.findall(f'.//*[@{param}]')
 
                 if parent_physicals is None:
-                    none_params += 1
+                    logging.debug('В файле %s не найдено %s', filename, param)
                     continue
 
                 for element in parent_physicals:
