@@ -192,9 +192,11 @@ class FeedHandler(FileMixin):
                 category_id = category_id_elem.text
 
                 if (
-                    vendor not in brands_dict or category_id
-                    not in all_target_categories
+                    vendor in brands_dict and category_id
+                    in all_target_categories
                 ):
+                    pass
+                else:
                     offers_parent.remove(offer)
                     removed_count += 1
 
