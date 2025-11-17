@@ -167,18 +167,22 @@ class FeedHandler(FileMixin):
                 all_target_categories.update(category_list)
                 for category_id in category_list:
                     all_target_categories.update(
-                        get_all_child_categories(category_id))
+                        get_all_child_categories(category_id)
+                    )
 
             offers = self.root.findall('.//offer')
             initial_count = len(offers)
-            offers_to_remove = []
+            removed_count = 0
 
-            for offer in offers:
+            offers_parent = self.root.find('.//offers') or self.root
+
+            for offer in offers[:]:
                 vendor_elem = offer.find('vendor')
                 category_id_elem = offer.find('categoryId')
 
                 if vendor_elem is None or category_id_elem is None:
-                    offers_to_remove.append(offer)
+                    offers_parent.remove(offer)
+                    removed_count += 1
                     continue
 
                 vendor = vendor_elem.text.strip() if vendor_elem.text else ''
@@ -188,21 +192,19 @@ class FeedHandler(FileMixin):
                     vendor in brands_dict and category_id
                     in all_target_categories
                 ):
-                    offers_to_remove.append(offer)
+                    offers_parent.remove(offer)
+                    removed_count += 1
 
-            for offer in offers_to_remove:
-                self.root.remove(offer)
-
-            remaining_count = initial_count - len(offers_to_remove)
+            remaining_count = initial_count - removed_count
 
             logging.info(
                 'Удалено %s офферов из %s. Осталось: %s',
-                len(offers_to_remove),
+                removed_count,
                 initial_count,
                 remaining_count
             )
 
-            if offers_to_remove:
+            if removed_count > 0:
                 self._is_modified = True
             else:
                 logging.info('Не найдено офферов для удаления')

@@ -38,7 +38,7 @@ def main():
 
     auction_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
     for filename in auction_filenames:
-        handler = FeedHandler(filename)
+        handler = FeedHandler(filename, feeds_folder=NEW_FEEDS_FOLDER)
         handler.remove_non_matching_offers(VENDOR_CATEGORY)
         handler.processing_and_safe(AUCTION_PREFIX,)
 
