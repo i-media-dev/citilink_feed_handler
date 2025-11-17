@@ -27,8 +27,7 @@ def main():
 
     for filename in filenames:
         handler = FeedHandler(filename)
-        handler.delete_tags(TAGS_FOR_DELETE)
-        handler.delete_param(PARAM_FOR_DELETE)
+        handler.processing_and_safe(TAGS_FOR_DELETE, PARAM_FOR_DELETE)
     # handler.process_feeds(CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST)
 
 

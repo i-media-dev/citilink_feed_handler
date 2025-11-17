@@ -28,6 +28,7 @@ class FeedHandler(FileMixin):
         self.new_feeds_folder = new_feeds_folder
         self.feeds_list = feeds_list
         self._root = None
+        self._is_modified = False
 
     def __repr__(self):
         return (
@@ -51,7 +52,24 @@ class FeedHandler(FileMixin):
         return self.root.findall('.//offer')
 
     @time_of_function
-    def delete_tags(self, tags):
+    def processing_and_safe(self, tags_to_delete=None, params_to_delete=None):
+        if tags_to_delete:
+            self._delete_tags(tags_to_delete)
+
+        if params_to_delete:
+            for param in params_to_delete:
+                self._delete_param(param)
+
+        if self._is_modified:
+            prefix = self.filename.split('_')[0]
+            new_filename = self.filename.replace(prefix, NEW_PREFIX)
+            self._save_xml(self.root, self.new_feeds_folder, new_filename)
+            self._is_modified = False
+            logging.info('Файл сохранен как %s', new_filename)
+        else:
+            logging.info('Изменений нет, файл не сохранен')
+
+    def _delete_tags(self, tags):
         """Метод удаляет переданные теги из офферов."""
         tags_dict_count = defaultdict(int)
         tags_non_dict_count = defaultdict(int)
@@ -66,17 +84,15 @@ class FeedHandler(FileMixin):
                         continue
                     offer.remove(target_tag)
                     tags_dict_count[tag] += 1
-            prefix = self.filename.split('_')[0]
-            new_filename = self.filename.replace(prefix, NEW_PREFIX)
-            self._save_xml(self.root, self.new_feeds_folder, new_filename)
+                    self._is_modified = True
+
             logging.info(
-                '\n%s переименован в  %s'
+                '\nУдаление тегов в файле %s:'
                 '\nВсего обработано офферов - %s'
                 '\nВсего удалено тегов - %s'
                 '\nВсего отсутствовавших тегов - %s',
                 self.filename,
-                new_filename,
-                len(self.offers),
+                len(offers),
                 tags_dict_count,
                 tags_non_dict_count
             )
@@ -84,31 +100,35 @@ class FeedHandler(FileMixin):
             logging.error('Неизвестная ошибка: %s', error)
             raise
 
-    @time_of_function
-    def delete_param(self, param):
+    def _delete_param(self, param):
         """Метод удаляет переданные параметры из офферов."""
         deleted_params = 0
         try:
             parent_physicals = self.root.findall(f'.//*[@{param}]')
 
-            if parent_physicals is None:
+            if not parent_physicals:
                 logging.debug('В файле %s не найдено %s', self.filename, param)
                 return
 
             for element in parent_physicals:
                 element.attrib.pop(param, None)
                 deleted_params += 1
+                self._is_modified = True
 
-            self._save_xml(self.root, self.new_feeds_folder, self.filename)
             logging.info(
+                '\nУдаление параметра в файле %s:'
                 '\nПараметр - %s'
-                '\nВсего найдено параметров в фиде %s - %s'
+                '\nВсего найдено параметров - %s'
                 '\nВсего удалено параметров - %s',
-                param,
                 self.filename,
+                param,
                 len(parent_physicals),
                 deleted_params,
             )
         except Exception as error:
             logging.error('Неизвестная ошибка: %s', error)
             raise
+
+    def make_auction_feed(self):
+        'retailmedia_auction'
+        pass
