@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 
-from handler.constants import FEEDS_FOLDER, NEW_FEEDS_FOLDER, NEW_PREFIX
+from handler.constants import FEEDS_FOLDER, NEW_FEEDS_FOLDER
 from handler.decorators import time_of_function
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
@@ -52,7 +52,12 @@ class FeedHandler(FileMixin):
         return self.root.findall('.//offer')
 
     @time_of_function
-    def processing_and_safe(self, tags_to_delete=None, params_to_delete=None):
+    def processing_and_safe(
+        self,
+        new_prefix,
+        tags_to_delete=None,
+        params_to_delete=None
+    ):
         if tags_to_delete:
             self._delete_tags(tags_to_delete)
 
@@ -62,7 +67,7 @@ class FeedHandler(FileMixin):
 
         if self._is_modified:
             prefix = self.filename.split('_')[0]
-            new_filename = self.filename.replace(prefix, NEW_PREFIX)
+            new_filename = self.filename.replace(prefix, new_prefix)
             self._save_xml(self.root, self.new_feeds_folder, new_filename)
             self._is_modified = False
             logging.info('Файл сохранен как %s', new_filename)
@@ -129,6 +134,79 @@ class FeedHandler(FileMixin):
             logging.error('Неизвестная ошибка: %s', error)
             raise
 
-    def make_auction_feed(self):
-        'retailmedia_auction'
-        pass
+    def remove_non_matching_offers(self, brands_dict: dict):
+        """
+        Удаляет из фида офферы, которые не
+        соответствуют критериям брендов и категорий
+        """
+        try:
+            all_categories = {}
+            categories = self.root.findall('.//category')
+            for category in categories:
+                cat_id = category.get('id')
+                parent_id = category.get('parentId')
+                all_categories[cat_id] = parent_id
+
+            category_children = defaultdict(list)
+            for cat_id, parent_id in all_categories.items():
+                category_children[parent_id].append(cat_id)
+
+            def get_all_child_categories(parent_id):
+                children = []
+                stack = [parent_id]
+
+                while stack:
+                    current_parent = stack.pop()
+                    for child_id in category_children.get(current_parent, []):
+                        children.append(child_id)
+                        stack.append(child_id)
+                return children
+
+            all_target_categories = set()
+            for category_list in brands_dict.values():
+                all_target_categories.update(category_list)
+                for category_id in category_list:
+                    all_target_categories.update(
+                        get_all_child_categories(category_id))
+
+            offers = self.root.findall('.//offer')
+            initial_count = len(offers)
+            offers_to_remove = []
+
+            for offer in offers:
+                vendor_elem = offer.find('vendor')
+                category_id_elem = offer.find('categoryId')
+
+                if vendor_elem is None or category_id_elem is None:
+                    offers_to_remove.append(offer)
+                    continue
+
+                vendor = vendor_elem.text.strip() if vendor_elem.text else ''
+                category_id = category_id_elem.text
+
+                if not (
+                    vendor in brands_dict and category_id
+                    in all_target_categories
+                ):
+                    offers_to_remove.append(offer)
+
+            for offer in offers_to_remove:
+                self.root.remove(offer)
+
+            remaining_count = initial_count - len(offers_to_remove)
+
+            logging.info(
+                'Удалено %s офферов из %s. Осталось: %s',
+                len(offers_to_remove),
+                initial_count,
+                remaining_count
+            )
+
+            if offers_to_remove:
+                self._is_modified = True
+            else:
+                logging.info('Не найдено офферов для удаления')
+
+        except Exception as error:
+            logging.error('Ошибка в remove_non_matching_offers: %s', error)
+            raise

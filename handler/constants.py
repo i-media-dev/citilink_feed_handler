@@ -5,8 +5,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PARAM_FOR_DELETE = 'parentIdPhysical'
+"""Параметр на удаление."""
 
 NEW_PREFIX = 'retailmedia'
+"""Префикс для обработанных фидов."""
+
+AUCTION_PREFIX = 'retailmedia_auction'
+"""Префикс для аукционных фидов."""
 
 TAGS_FOR_DELETE = ('url2', 'cpa', 'barcode')
 """Теги на удаление."""
