@@ -33,11 +33,13 @@ def main():
             PARAM_FOR_DELETE
         )
     # handler.process_feeds(CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST)
-    report.full_outer_join_feeds()
-    report.inner_join_feeds()
 
-    auction_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
-    for filename in auction_filenames:
+    new_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
+    report_new = FeedReport(new_filenames)
+    report_new.full_outer_join_feeds()
+    report_new.inner_join_feeds()
+
+    for filename in new_filenames:
         handler = FeedHandler(filename, feeds_folder=NEW_FEEDS_FOLDER)
         handler.remove_non_matching_offers(VENDOR_CATEGORY)
         handler.processing_and_safe(AUCTION_PREFIX,)
