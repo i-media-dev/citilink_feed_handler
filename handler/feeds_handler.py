@@ -185,12 +185,15 @@ class FeedHandler(FileMixin):
                     removed_count += 1
                     continue
 
-                vendor = vendor_elem.text.strip() if vendor_elem.text else ''
+                vendor = (
+                    vendor_elem.text.strip().lower()
+                    if vendor_elem.text else ''
+                )
                 category_id = category_id_elem.text
 
-                if not (
-                    vendor in brands_dict and category_id
-                    in all_target_categories
+                if (
+                    vendor not in brands_dict or category_id
+                    not in all_target_categories
                 ):
                     offers_parent.remove(offer)
                     removed_count += 1
