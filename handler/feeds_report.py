@@ -123,7 +123,7 @@ class FeedReport(FileMixin):
 
     def _super_feed(self) -> tuple:
         """Защищенный метод, создает шаблон фида с пустыми offers."""
-        root = self._get_root(self.filenames[0], self.feeds_folder)
+        root = self._get_root(self.filenames[0], self.new_feeds_folder)
         offers = root.find('.//offers')
         if offers is not None:
             offers.clear()
