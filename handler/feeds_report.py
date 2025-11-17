@@ -140,7 +140,7 @@ class FeedReport(FileMixin):
         offer_counts: dict = defaultdict(int)
         all_offers = {}
         for filename in self.filenames:
-            root = self._get_root(filename, self.feeds_folder)
+            root = self._get_root(filename, self.new_feeds_folder)
             for offer in root.findall('.//offer'):
                 offer_id = offer.get('id')
                 if offer_id:

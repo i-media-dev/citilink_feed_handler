@@ -22,8 +22,6 @@ def main():
     saver.save_xml()
 
     data = report.get_offers_report()
-    report.full_outer_join_feeds()
-    report.inner_join_feeds()
 
     save_to_database(db_client, data)
 
@@ -35,6 +33,9 @@ def main():
             PARAM_FOR_DELETE
         )
     # handler.process_feeds(CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST)
+    report.full_outer_join_feeds()
+    report.inner_join_feeds()
+
     auction_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
     for filename in auction_filenames:
         handler = FeedHandler(filename)
