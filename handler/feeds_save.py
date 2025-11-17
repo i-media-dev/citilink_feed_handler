@@ -35,6 +35,12 @@ class FeedSaver(FileMixin):
         self.feeds_list = feeds_list
         self.feeds_folder = feeds_folder
 
+    def __repr__(self):
+        return (
+            f"FeedSaver(feeds_folder='{self.feeds_folder}', "
+            f"feeds_list='{self.feeds_list}'), "
+        )
+
     @retry_on_network_error(max_attempts=3, delays=(2, 5, 10))
     def _get_file(self, feed: str):
         """Защищенный метод, получает фид по ссылке."""
@@ -58,22 +64,6 @@ class FeedSaver(FileMixin):
     def _get_filename(self, feed: str) -> str:
         """Защищенный метод, формирующий имя xml-файлу."""
         return feed.split('/')[-1]
-
-    def _indent(self, elem, level=0) -> None:
-        """Защищенный метод, расставляет правильные отступы в XML файлах."""
-        i = '\n' + level * '  '
-        if len(elem):
-            if not elem.text or not elem.text.strip():
-                elem.text = i + '  '
-            if not elem.tail or not elem.tail.strip():
-                elem.tail = i
-            for child in elem:
-                self._indent(child, level + 1)
-            if not elem.tail or not elem.tail.strip():
-                elem.tail = i
-        else:
-            if level and (not elem.tail or not elem.tail.strip()):
-                elem.tail = i
 
     def _validate_xml(self, xml_content: bytes):
         """

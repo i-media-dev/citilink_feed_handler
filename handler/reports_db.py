@@ -1,19 +1,122 @@
 import logging
+from datetime import datetime as dt
 
+import numpy as np
+
+from handler.calculation import clear_avg, clear_max, clear_median, clear_min
 from handler.constants import (CREATE_CATALOG_TABLE, CREATE_REPORTS_TABLE,
-                               INSERT_CATALOG, INSERT_REPORT, NAME_OF_SHOP)
-from handler.decorators import connection_db
+                               DATE_FORMAT, DECIMAL_ROUNDING, INSERT_CATALOG,
+                               INSERT_REPORT, NAME_OF_SHOP)
+from handler.decorators import connection_db, time_of_function, try_except
 from handler.exceptions import TableNameError
 from handler.logging_config import setup_logging
+from handler.mixins import FileMixin
 
 setup_logging()
 
 
-class ReportDataBase:
+class ReportDataBase(FileMixin):
     """Класс, предоставляющий интерфейс для работы с базой данных"""
 
     def __init__(self, shop_name: str = NAME_OF_SHOP):
         self.shop_name = shop_name
+
+    def __repr__(self):
+        return (
+            f"ReportDataBase(shop_name='{self.shop_name}', "
+        )
+
+    @time_of_function
+    @try_except
+    def get_offers_report(
+        self,
+        filenames: list,
+        feeds_folder: str
+    ) -> list[dict]:
+        """Метод, формирующий отчет по офферам."""
+        result = []
+        date_str = (dt.now()).strftime(DATE_FORMAT)
+        for filename in filenames:
+            tree = self._get_tree(filename, feeds_folder)
+            root = tree.getroot()
+            category_data = {}
+            all_categories = {}
+
+            for category in root.findall('.//category'):
+                category_name = category.text
+                category_id = category.get('id')
+                parent_id = category.get('parentId')
+                all_categories[category_id] = parent_id
+                category_data[category_id] = {
+                    'prices': [],
+                    'category_name': category_name,
+                    'offers_count': 0
+                }
+
+            for offer in root.findall('.//offer'):
+                category_id = offer.findtext('categoryId')
+                price = offer.findtext('price')
+                if category_id and price:
+                    if category_id not in category_data:
+                        category_data[category_id] = {
+                            'prices': [],
+                            'category_name': '',
+                            'offers_count': 0
+                        }
+                    category_data[category_id]['prices'].append(int(price))
+                    category_data[category_id]['offers_count'] += 1
+
+            def aggregate_data(category_id):
+                prices = category_data[category_id]['prices'].copy()
+                offers_count = category_data[category_id]['offers_count']
+
+                for child_id, parent_id in all_categories.items():
+                    if parent_id == category_id:
+                        child_prices, child_count = aggregate_data(child_id)
+                        prices.extend(child_prices)
+                        offers_count += child_count
+                category_data[category_id]['prices'] = prices
+                category_data[category_id]['offers_count'] = offers_count
+                return prices, offers_count
+
+            root_categories = [
+                cat_id for cat_id, parent_id in all_categories.items()
+                if parent_id is None
+            ]
+            for root_id in root_categories:
+                aggregate_data(root_id)
+
+            for category_id, data in category_data.items():
+                count_offers = data['offers_count']
+                price_list = data['prices']
+                parent_id = all_categories.get(category_id)
+                category_name = data['category_name']
+
+                result.append({
+                    'date': date_str,
+                    'feed_name': filename,
+                    'category_name': category_name,
+                    'category_id': category_id,
+                    'parent_id': parent_id,
+                    'count_offers': count_offers,
+                    'min_price': min(price_list) if price_list else 0,
+                    'clear_min_price': clear_min(price_list)
+                    if price_list else 0,
+                    'max_price': max(price_list) if price_list else 0,
+                    'clear_max_price': clear_max(price_list)
+                    if price_list else 0,
+                    'avg_price': round(
+                        sum(price_list) / len(price_list), DECIMAL_ROUNDING
+                    ) if price_list else 0,
+                    'clear_avg_price': clear_avg(price_list)
+                    if price_list else 0,
+                    'median_price': round(
+                        np.median(price_list), DECIMAL_ROUNDING
+                    ) if price_list else 0,
+                    'clear_median_price': clear_median(price_list)
+                    if price_list else 0
+                })
+        return result
 
     @connection_db
     def _allowed_tables(self, cursor=None) -> list:

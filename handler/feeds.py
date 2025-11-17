@@ -21,4 +21,4 @@ FEEDS = (
     'https://feeds-mic.s1.citilink.ru/context/context_yar_cl.xml',
     'https://feeds-mic.s1.citilink.ru/context/context_stav_cl.xml',
 )
-"""Список ссылок на фиды для скачивания."""
+"""Кортеж ссылок на фиды для скачивания."""
