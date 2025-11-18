@@ -134,6 +134,7 @@ class FeedHandler(FileMixin):
             logging.error('Неизвестная ошибка: %s', error)
             raise
 
+    @time_of_function
     def remove_non_matching_offers(self, brands_dict: dict):
         """
         Удаляет из фида офферы, которые не
@@ -216,7 +217,9 @@ class FeedHandler(FileMixin):
             remaining_count = initial_count - removed_count
             logging.info(
                 'Удалено %s офферов из %s. Осталось: %s',
-                removed_count, initial_count, remaining_count
+                removed_count,
+                initial_count,
+                remaining_count
             )
 
             if removed_count > 0:

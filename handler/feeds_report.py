@@ -160,7 +160,7 @@ class FeedReport(FileMixin):
         for offer_id, count in offer_counts.items():
             if count == len(self.filenames):
                 offers.append(all_offers[offer_id])
-        self._save_xml(root, self.new_feeds_folder, 'inner_join_feed.xml')
+        self._save_xml(root, 'join_feeds', 'inner_join_feed.xml')
         return True
 
     @time_of_function
@@ -174,5 +174,5 @@ class FeedReport(FileMixin):
         root, offers = self._super_feed()
         for offer in all_offers.values():
             offers.append(offer)
-        self._save_xml(root, self.new_feeds_folder, 'full_outer_join_feed.xml')
+        self._save_xml(root, 'join_feeds', 'full_outer_join_feed.xml')
         return True

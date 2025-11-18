@@ -34,9 +34,9 @@ def main():
     # handler.process_feeds(CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST)
 
     new_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
-    # report_new = FeedReport(new_filenames)
-    # report_new.full_outer_join_feeds()
-    # report_new.inner_join_feeds()
+    report_new = FeedReport(new_filenames)
+    report_new.full_outer_join_feeds()
+    report_new.inner_join_feeds()
 
     for filename in new_filenames:
         handler = FeedHandler(filename, feeds_folder=NEW_FEEDS_FOLDER)
