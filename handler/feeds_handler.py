@@ -172,25 +172,21 @@ class FeedHandler(FileMixin):
 
             print(f'=== ДЕБАГ: {self.filename} НАЧАЛО ===')
             offers = self.root.findall('.//offer')
+            print(
+                f'Целевые категории: {sorted(all_target_categories, key=str)}')
             print(f'Всего офферов в файле: {len(offers)}')
             print(f'Целевых категорий: {len(all_target_categories)}')
 
             if len(offers) > 0:
                 for i, offer in enumerate(offers[:5]):
-                    vendor_elem = offer.find('vendor')
-                    category_id_elem = offer.find('categoryId')
+                    vendor = offer.findtext('vendor') or 'NO_VENDOR'
+                    category_id = offer.findtext('categoryId') or 'NO_CATEGORY'
 
-                    vendor = vendor_elem.text.strip().lower(
-                    ) if vendor_elem and vendor_elem.text else 'NO_VENDOR'
-                    category_id = (
-                        category_id_elem.text if category_id_elem
-                        else 'NO_CATEGORY'
-                    )
-
-                    in_brands = vendor in brands_dict
+                    vendor_lower = vendor.strip().lower() if vendor != 'NO_VENDOR' else vendor
+                    in_brands = vendor_lower in brands_dict
                     in_categories = category_id in all_target_categories
 
-                    print(f'Оффер {i}: {vendor} - cat:{category_id}')
+                    print(f'Оффер {i}: {vendor_lower} - cat:{category_id}')
                     print(
                         f'В словаре: {in_brands}, '
                         f'В категориях: {in_categories}'
@@ -204,24 +200,19 @@ class FeedHandler(FileMixin):
             offers_parent = self.root.find('.//offers') or self.root
 
             for offer in offers[:]:
-                vendor_elem = offer.find('vendor')
-                category_id_elem = offer.find('categoryId')
+                vendor = offer.findtext('vendor')
+                category_id = offer.findtext('categoryId')
 
-                if vendor_elem is None or category_id_elem is None:
+                if vendor is None or category_id is None:
                     offers_parent.remove(offer)
                     removed_count += 1
                     continue
 
-                vendor = (
-                    vendor_elem.text.strip().lower()
-                    if vendor_elem.text else ''
-                )
-                category_id = category_id_elem.text
+                vendor_lower = vendor.strip().lower()
+                in_brands = vendor_lower in brands_dict
+                in_categories = category_id in all_target_categories
 
-                if (
-                    vendor in brands_dict and category_id
-                    in all_target_categories
-                ):
+                if in_brands and in_categories:
                     pass
                 else:
                     offers_parent.remove(offer)
