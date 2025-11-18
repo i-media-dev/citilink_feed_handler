@@ -170,6 +170,33 @@ class FeedHandler(FileMixin):
                         get_all_child_categories(category_id)
                     )
 
+            print(f'=== ДЕБАГ: {self.filename} НАЧАЛО ===')
+            offers = self.root.findall('.//offer')
+            print(f'Всего офферов в файле: {len(offers)}')
+            print(f'Целевых категорий: {len(all_target_categories)}')
+
+            if len(offers) > 0:
+                for i, offer in enumerate(offers[:5]):
+                    vendor_elem = offer.find('vendor')
+                    category_id_elem = offer.find('categoryId')
+
+                    vendor = vendor_elem.text.strip().lower(
+                    ) if vendor_elem and vendor_elem.text else 'NO_VENDOR'
+                    category_id = (
+                        category_id_elem.text if category_id_elem
+                        else 'NO_CATEGORY'
+                    )
+
+                    in_brands = vendor in brands_dict
+                    in_categories = category_id in all_target_categories
+
+                    print(f'Оффер {i}: {vendor} - cat:{category_id}')
+                    print(
+                        f'В словаре: {in_brands}, '
+                        f'В категориях: {in_categories}'
+                    )
+            print(f'=== ДЕБАГ: {self.filename} КОНЕЦ ===')
+
             offers = self.root.findall('.//offer')
             initial_count = len(offers)
             removed_count = 0
