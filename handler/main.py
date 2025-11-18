@@ -13,9 +13,9 @@ from handler.vendor_category_dict import VENDOR_CATEGORY
 @time_of_script
 @time_of_function
 def main():
+    saver = FeedSaver()
     filenames = get_filenames_list(FEEDS_FOLDER)
 
-    saver = FeedSaver()
     report = FeedReport(filenames)
     db_client = ReportDataBase()
 
