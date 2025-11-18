@@ -3,10 +3,10 @@ from handler.constants import (AUCTION_PREFIX, FEEDS_FOLDER, NEW_FEEDS_FOLDER,
                                NEW_PREFIX, PARAM_FOR_DELETE, TAGS_FOR_DELETE)
 from handler.decorators import time_of_function, time_of_script
 from handler.feeds_handler import FeedHandler
-# from handler.feeds_report import FeedReport
-# from handler.feeds_save import FeedSaver
-# from handler.reports_db import ReportDataBase
-from handler.utils import get_filenames_list  # save_to_database
+from handler.feeds_report import FeedReport
+from handler.feeds_save import FeedSaver
+from handler.reports_db import ReportDataBase
+from handler.utils import get_filenames_list, save_to_database
 from handler.vendor_category_dict import VENDOR_CATEGORY
 
 
@@ -15,15 +15,15 @@ from handler.vendor_category_dict import VENDOR_CATEGORY
 def main():
     filenames = get_filenames_list(FEEDS_FOLDER)
 
-    # saver = FeedSaver()
-    # report = FeedReport(filenames)
-    # db_client = ReportDataBase()
+    saver = FeedSaver()
+    report = FeedReport(filenames)
+    db_client = ReportDataBase()
 
-    # saver.save_xml()
+    saver.save_xml()
 
-    # data = report.get_offers_report()
+    data = report.get_offers_report()
 
-    # save_to_database(db_client, data)
+    save_to_database(db_client, data)
 
     for filename in filenames:
         handler = FeedHandler(filename)
