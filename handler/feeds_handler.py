@@ -149,55 +149,38 @@ class FeedHandler(FileMixin):
 
             category_children = defaultdict(list)
             for cat_id, parent_id in all_categories.items():
-                category_children[parent_id].append(cat_id)
+                if parent_id:
+                    category_children[parent_id].append(cat_id)
 
             def get_all_child_categories(parent_id):
-                children = []
-                stack = [parent_id]
+                children = set()
+                stack = [str(parent_id)]
 
                 while stack:
                     current_parent = stack.pop()
+                    children.add(current_parent)
                     for child_id in category_children.get(current_parent, []):
-                        children.append(child_id)
-                        stack.append(child_id)
+                        if child_id not in children:
+                            children.add(child_id)
+                            stack.append(child_id)
                 return children
 
             all_target_categories = set()
+
             for category_list in brands_dict.values():
-                all_target_categories.update(category_list)
                 for category_id in category_list:
-                    all_target_categories.update(
-                        get_all_child_categories(category_id)
-                    )
-
-            print(f'=== ДЕБАГ: {self.filename} НАЧАЛО ===')
-            offers = self.root.findall('.//offer')
-            print(
-                f'Целевые категории: {sorted(all_target_categories, key=str)}')
-            print(f'Всего офферов в файле: {len(offers)}')
-            print(f'Целевых категорий: {len(all_target_categories)}')
-
-            if len(offers) > 0:
-                for i, offer in enumerate(offers[:5]):
-                    vendor = offer.findtext('vendor') or 'NO_VENDOR'
-                    category_id = offer.findtext('categoryId') or 'NO_CATEGORY'
-
-                    vendor_lower = vendor.strip().lower() if vendor != 'NO_VENDOR' else vendor
-                    in_brands = vendor_lower in brands_dict
-                    in_categories = category_id in all_target_categories
-
-                    print(f'Оффер {i}: {vendor_lower} - cat:{category_id}')
-                    print(
-                        f'В словаре: {in_brands}, '
-                        f'В категориях: {in_categories}'
-                    )
-            print(f'=== ДЕБАГ: {self.filename} КОНЕЦ ===')
+                    if category_id == 'all':
+                        all_target_categories.update(all_categories.keys())
+                        all_target_categories.add(None)
+                    elif isinstance(category_id, int) or category_id.isdigit():
+                        all_target_categories.update(
+                            get_all_child_categories(category_id)
+                        )
 
             offers = self.root.findall('.//offer')
+            offers_parent = self.root.find('.//offers') or self.root
             initial_count = len(offers)
             removed_count = 0
-
-            offers_parent = self.root.find('.//offers') or self.root
 
             for offer in offers[:]:
                 vendor = offer.findtext('vendor')
@@ -209,28 +192,35 @@ class FeedHandler(FileMixin):
                     continue
 
                 vendor_lower = vendor.strip().lower()
-                in_brands = vendor_lower in brands_dict
-                in_categories = category_id in all_target_categories
+                vendor_in_dict = vendor_lower in brands_dict
 
-                if in_brands and in_categories:
-                    pass
-                else:
+                if not vendor_in_dict:
                     offers_parent.remove(offer)
                     removed_count += 1
+                    continue
+
+                vendor_categories = brands_dict[vendor_lower]
+
+                if 'all' in vendor_categories:
+                    continue
+                elif not vendor_categories:
+                    offers_parent.remove(offer)
+                    removed_count += 1
+                    continue
+                else:
+                    category_in_target = category_id in all_target_categories
+                    if not category_in_target:
+                        offers_parent.remove(offer)
+                        removed_count += 1
 
             remaining_count = initial_count - removed_count
-
             logging.info(
                 'Удалено %s офферов из %s. Осталось: %s',
-                removed_count,
-                initial_count,
-                remaining_count
+                removed_count, initial_count, remaining_count
             )
 
             if removed_count > 0:
                 self._is_modified = True
-            else:
-                logging.info('Не найдено офферов для удаления')
 
         except Exception as error:
             logging.error('Ошибка в remove_non_matching_offers: %s', error)
