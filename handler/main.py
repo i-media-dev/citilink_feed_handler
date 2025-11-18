@@ -14,12 +14,11 @@ from handler.vendor_category_dict import VENDOR_CATEGORY
 @time_of_function
 def main():
     saver = FeedSaver()
+    saver.save_xml()
     filenames = get_filenames_list(FEEDS_FOLDER)
 
     report = FeedReport(filenames)
     db_client = ReportDataBase()
-
-    saver.save_xml()
 
     data = report.get_offers_report()
 
