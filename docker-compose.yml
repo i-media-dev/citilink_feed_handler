@@ -9,3 +9,4 @@ services:
       - ./logs:/app/logs
       - ./${FEEDS_FOLDER}:/app/${FEEDS_FOLDER}
       - /home/main_ftp_user/projects/citilink/${NEW_FEEDS_FOLDER}:/app/${NEW_FEEDS_FOLDER}
+      - /home/main_ftp_user/projects/citilink/${JOIN_FEEDS_FOLDER}:/app/${JOIN_FEEDS_FOLDER}

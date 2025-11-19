@@ -1,7 +1,7 @@
 # from handler.constants import CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST
 from handler.constants import (AUCTION_PREFIX, FEEDS_FOLDER, NEW_FEEDS_FOLDER,
                                NEW_PREFIX, PARAM_FOR_DELETE, TAGS_FOR_DELETE)
-from handler.decorators import time_of_function, time_of_script
+from handler.decorators import time_of_script
 from handler.feeds_handler import FeedHandler
 from handler.feeds_report import FeedReport
 from handler.feeds_save import FeedSaver
@@ -11,7 +11,6 @@ from handler.vendor_category_dict import VENDOR_CATEGORY
 
 
 @time_of_script
-@time_of_function
 def main():
     saver = FeedSaver()
     saver.save_xml()

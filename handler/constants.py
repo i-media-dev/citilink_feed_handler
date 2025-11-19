@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+MAX_WORKERS = 10
+"""Количество одновременно запущенных потоков."""
+
 PARAM_FOR_DELETE = 'parentIdPhysical'
 """Параметр на удаление."""
 
@@ -30,6 +33,9 @@ MAX_RETRIES = 5
 
 NAME_OF_SHOP = 'citilink'
 """Константа названия магазина."""
+
+JOIN_FEEDS_FOLDER = os.getenv('JOIN_FEEDS_FOLDER', 'join_feeds')
+"""Константа стокового названия директории с объединенными фидами."""
 
 FEEDS_FOLDER = os.getenv('FEEDS_FOLDER', 'temp_feeds')
 """Константа стокового названия директорий."""
