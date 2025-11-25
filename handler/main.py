@@ -40,7 +40,7 @@ def main():
     for filename in new_filenames:
         handler = FeedHandler(filename, feeds_folder=NEW_FEEDS_FOLDER)
         handler.remove_non_matching_offers(VENDOR_CATEGORY)
-        handler.processing_and_safe(AUCTION_PREFIX,)
+        handler.processing_and_safe(AUCTION_PREFIX)
 
 
 if __name__ == '__main__':

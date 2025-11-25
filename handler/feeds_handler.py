@@ -9,6 +9,8 @@ from handler.mixins import FileMixin
 
 setup_logging()
 
+logger = logging.getLogger(__name__)
+
 
 class FeedHandler(FileMixin):
     """
@@ -77,7 +79,6 @@ class FeedHandler(FileMixin):
     def _delete_tags(self, tags):
         """Метод удаляет переданные теги из офферов."""
         tags_dict_count = defaultdict(int)
-        tags_non_dict_count = defaultdict(int)
         try:
             offers = self.root.findall('.//offer')
             for offer in offers:
@@ -85,22 +86,15 @@ class FeedHandler(FileMixin):
                     target_tag = offer.find(tag)
 
                     if target_tag is None:
-                        tags_non_dict_count[tag] += 1
                         continue
                     offer.remove(target_tag)
                     tags_dict_count[tag] += 1
                     self._is_modified = True
 
-            logging.info(
-                '\nУдаление тегов в файле %s:'
-                '\nВсего обработано офферов - %s'
-                '\nВсего удалено тегов - %s'
-                '\nВсего отсутствовавших тегов - %s',
-                self.filename,
-                len(offers),
-                tags_dict_count,
-                tags_non_dict_count
-            )
+            logger.bot_event('Удаление тегов в фиде %s:', self.filename)
+            logger.bot_event('Всего обработано офферов - %s', len(offers))
+            logger.bot_event('Всего удалено тегов - %s', tags_dict_count)
+
         except Exception as error:
             logging.error('Неизвестная ошибка: %s', error)
             raise
@@ -109,27 +103,31 @@ class FeedHandler(FileMixin):
         """Метод удаляет переданные параметры из офферов."""
         deleted_params = 0
         try:
-            parent_physicals = self.root.findall(f'.//*[@{param}]')
+            target_param = self.root.findall(f'.//*[@{param}]')
 
-            if not parent_physicals:
+            if not target_param:
                 logging.debug('В файле %s не найдено %s', self.filename, param)
                 return
 
-            for element in parent_physicals:
+            for element in target_param:
                 element.attrib.pop(param, None)
                 deleted_params += 1
                 self._is_modified = True
 
-            logging.info(
-                '\nУдаление параметра в файле %s:'
-                '\nПараметр - %s'
-                '\nВсего найдено параметров - %s'
-                '\nВсего удалено параметров - %s',
-                self.filename,
+            logger.bot_event(
+                'Удаление параметра %s в фиде %s:',
                 param,
-                len(parent_physicals),
-                deleted_params,
+                self.filename
             )
+            logger.bot_event(
+                'Всего найдено параметров в фиде - %s',
+                len(target_param)
+            )
+            logger.bot_event(
+                'Всего удалено параметров в фиде - %s',
+                deleted_params
+            )
+
         except Exception as error:
             logging.error('Неизвестная ошибка: %s', error)
             raise
@@ -166,7 +164,7 @@ class FeedHandler(FileMixin):
                             stack.append(child_id)
                 return children
 
-            all_target_categories = set()
+            all_target_categories: set = set()
 
             for category_list in brands_dict.values():
                 for category_id in category_list:
@@ -215,7 +213,7 @@ class FeedHandler(FileMixin):
                         removed_count += 1
 
             remaining_count = initial_count - removed_count
-            logging.info(
+            logger.bot_event(
                 'Удалено %s офферов из %s. Осталось: %s',
                 removed_count,
                 initial_count,
