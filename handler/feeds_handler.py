@@ -91,9 +91,13 @@ class FeedHandler(FileMixin):
                     tags_dict_count[tag] += 1
                     self._is_modified = True
 
-            logger.bot_event('Удаление тегов в фиде %s:', self.filename)
-            logger.bot_event('Всего обработано офферов - %s', len(offers))
-            logger.bot_event('Всего удалено тегов - %s', tags_dict_count)
+            logging.info('Удаление тегов в фиде %s:', self.filename)
+            logging.info('Всего обработано офферов - %s', len(offers))
+            logger.bot_event(
+                'Всего удалено тегов в фиде %s - %s',
+                self.filename,
+                tags_dict_count
+            )
 
         except Exception as error:
             logging.error('Неизвестная ошибка: %s', error)
@@ -114,17 +118,18 @@ class FeedHandler(FileMixin):
                 deleted_params += 1
                 self._is_modified = True
 
-            logger.bot_event(
+            logging.info(
                 'Удаление параметра %s в фиде %s:',
                 param,
                 self.filename
             )
-            logger.bot_event(
+            logging.info(
                 'Всего найдено параметров в фиде - %s',
                 len(target_param)
             )
             logger.bot_event(
-                'Всего удалено параметров в фиде - %s',
+                'Всего удалено параметров в фиде %s - %s',
+                self.filename,
                 deleted_params
             )
 
@@ -214,7 +219,8 @@ class FeedHandler(FileMixin):
 
             remaining_count = initial_count - removed_count
             logger.bot_event(
-                'Удалено %s офферов из %s. Осталось: %s',
+                'В фиде %s удалено %s/%s офферов. Осталось: %s',
+                self.filename,
                 removed_count,
                 initial_count,
                 remaining_count
