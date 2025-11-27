@@ -48,11 +48,6 @@ class FeedHandler(FileMixin):
             self._root = self._get_root(self.filename, self.feeds_folder)
         return self._root
 
-    @property
-    def offers(self) -> list:
-        """Доступ к офферам (для анализа, поиска)."""
-        return self.root.findall('.//offer')
-
     @time_of_function
     def processing_and_safe(
         self,
@@ -93,7 +88,7 @@ class FeedHandler(FileMixin):
 
             logging.info('Удаление тегов в фиде %s:', self.filename)
             logging.info('Всего обработано офферов - %s', len(offers))
-            logger.bot_event(
+            logging.info(
                 'Всего удалено тегов в фиде %s - %s',
                 self.filename,
                 tags_dict_count
@@ -127,7 +122,7 @@ class FeedHandler(FileMixin):
                 'Всего найдено параметров в фиде - %s',
                 len(target_param)
             )
-            logger.bot_event(
+            logging.info(
                 'Всего удалено параметров в фиде %s - %s',
                 self.filename,
                 deleted_params
@@ -218,7 +213,7 @@ class FeedHandler(FileMixin):
                         removed_count += 1
 
             remaining_count = initial_count - removed_count
-            logger.bot_event(
+            logging.info(
                 'В фиде %s удалено %s/%s офферов. Осталось: %s',
                 self.filename,
                 removed_count,
