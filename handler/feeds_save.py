@@ -111,11 +111,8 @@ class FeedSaver(FileMixin):
         for feed in self.feeds_list:
             file_name = self._get_filename(feed)
             file_path = folder_path / file_name
-            response = self._get_file(feed)
-            if response is None:
-                logging.warning('Фид %s не получен.', file_name)
-                continue
             try:
+                response = self._get_file(feed)
                 xml_content = response.content
                 decoded_content, encoding = self._validate_xml(xml_content)
                 xml_tree = ET.fromstring(decoded_content)
