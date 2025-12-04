@@ -4,6 +4,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+FORMAT_VIDEO = 'mp4'
+"""Формат видео."""
+
+FPS = 30
+"""Кадры в секунду."""
+
+TARGET_SECONDS_VIDEO = 3
+"""Секунды для целевого товара."""
+
+TOTAL_SECONDS_VIDEO = 15
+"""Суммарное время видео."""
+
+VIDEO_CODEC = 'mp4v'
+"""Кодек видео."""
+
 ATTEMPTION_LOAD_FEED = 3
 """Попытки для скачивания фида."""
 
@@ -36,6 +51,9 @@ MAX_RETRIES = 5
 
 NAME_OF_SHOP = 'citilink'
 """Константа названия магазина."""
+
+VIDEOS_FOLDER = os.getenv('VIDEOS_FOLDER', 'videos')
+"""Константа стокового названия директории с видео."""
 
 JOIN_FEEDS_FOLDER = os.getenv('JOIN_FEEDS_FOLDER', 'join_feeds')
 """Константа стокового названия директории с объединенными фидами."""

@@ -227,3 +227,14 @@ class FeedHandler(FileMixin):
         except Exception as error:
             logging.error('Ошибка в remove_non_matching_offers: %s', error)
             raise
+
+    def get_images_for_video(self):
+        """
+        Docstring для get_images_for_video
+
+        :param self: Описание
+        """
+        categories = self.root.findall('.//category')
+        offers = self.root.findall('.//offer')
+        for category in categories:
+            pass

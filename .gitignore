@@ -11,6 +11,7 @@
 *.csv
 *.xml
 *.tmp
+*.mp4
 env/
 __pycache__/
 .env

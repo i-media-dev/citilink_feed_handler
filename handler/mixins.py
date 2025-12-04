@@ -2,7 +2,8 @@ import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from handler.exceptions import DirectoryCreationError, GetTreeError
+from handler.exceptions import (DirectoryCreationError, EmptyFeedsListError,
+                                GetTreeError)
 from handler.logging_config import setup_logging
 
 setup_logging()
@@ -72,3 +73,62 @@ class FileMixin:
                 error
             )
             raise GetTreeError('Ошибка получения дерева фида.')
+
+    def _get_files_list(self, folder_name: str) -> list:
+        """Защищенный метод, возвращает список названий фидов."""
+        folder_path = Path(__file__).parent.parent / folder_name
+        if not folder_path.exists():
+            logging.error(f'Папка {folder_name} не существует')
+            raise DirectoryCreationError(f'Папка {folder_name} не найдена')
+        file_list = [
+            file.name for file in folder_path.iterdir() if file.is_file()
+        ]
+        if not file_list:
+            logging.error('В папке нет файлов')
+            raise EmptyFeedsListError('Нет скачанных файлов')
+        logging.debug(f'Найдены файлы: {file_list}')
+        return file_list
+
+    def _get_files_dict(self, folder_name: str) -> dict:
+        """
+        Защищенный метод, возвращает словарь
+        '{offer_id}: {filename}' названий фидов.
+        """
+        folder_path = Path(__file__).parent.parent / folder_name
+        if not folder_path.exists():
+            logging.error(f'Папка {folder_name} не существует')
+            raise DirectoryCreationError(f'Папка {folder_name} не найдена')
+        files_dict = {
+            file.name.split('.')[0]: file.name for file
+            in folder_path.iterdir() if file.is_file()
+        }
+        if not files_dict:
+            logging.error('В папке нет файлов')
+            raise EmptyFeedsListError('Нет скачанных файлов')
+        logging.debug(f'Найдены файлы: {files_dict}')
+        return files_dict
+
+    def _build_set(self, folder: str, target_set: set):
+        """Защищенный метод, строит множество всех существующих файлов."""
+        try:
+            files = self._get_files_list(folder)
+            for file in files:
+                offer_id = file.split('.')[0]
+                if offer_id:
+                    target_set.add(offer_id)
+
+            logging.info(
+                'Построен кэш для %s файлов',
+                len(target_set)
+            )
+        except EmptyFeedsListError:
+            raise
+        except DirectoryCreationError:
+            raise
+        except Exception as error:
+            logging.error(
+                'Неожиданная ошибка при сборе множества '
+                'скачанных изображений: %s',
+                error
+            )
+            raise
