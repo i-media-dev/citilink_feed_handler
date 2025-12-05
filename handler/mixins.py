@@ -75,7 +75,10 @@ class FileMixin:
             raise GetTreeError('Ошибка получения дерева фида.')
 
     def _get_files_list(self, folder_name: str) -> list:
-        """Защищенный метод, возвращает список названий фидов."""
+        """
+        Защищенный метод, возвращает список
+        названий файлов в переданной директории.
+        """
         folder_path = Path(__file__).parent.parent / folder_name
         if not folder_path.exists():
             logging.error(f'Папка {folder_name} не существует')
@@ -92,7 +95,7 @@ class FileMixin:
     def _get_files_dict(self, folder_name: str) -> dict:
         """
         Защищенный метод, возвращает словарь
-        '{offer_id}: {filename}' названий фидов.
+        '{offer_id}: {filename}' названий файлов в переданной директории.
         """
         folder_path = Path(__file__).parent.parent / folder_name
         if not folder_path.exists():
@@ -109,7 +112,10 @@ class FileMixin:
         return files_dict
 
     def _build_set(self, folder: str, target_set: set):
-        """Защищенный метод, строит множество всех существующих файлов."""
+        """
+        Защищенный метод, строит множество всех
+        существующих файлов в переданной директории.
+        """
         try:
             files = self._get_files_list(folder)
             for file in files:

@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+IMAGE_FTP_ADDRESS = 'https://feeds.i-media.ru/projects/citilink/new_images'
+"""Адрес директории на ftp для изображений."""
+
+VIDEO_FTP_ADDRESS = 'https://feeds.i-media.ru/projects/citilink/videos'
+"""Адрес директории на ftp для видео."""
+
 FORMAT_VIDEO = 'mp4'
 """Формат видео."""
 
@@ -51,6 +57,18 @@ MAX_RETRIES = 5
 
 NAME_OF_SHOP = 'citilink'
 """Константа названия магазина."""
+
+NAME_OF_FRAME = 'logo_v1.png'
+"""Название файла рамки."""
+
+RGB_COLOR_SETTINGS = (255, 255, 255)
+"""Цвет RGB холста."""
+
+RGBA_COLOR_SETTINGS = (0, 0, 0, 0)
+"""Цвет RGBA холста."""
+
+FRAME_FOLDER = os.getenv('FRAME_FOLDER', 'frame')
+"""Константа стокового названия директории c рамкой"""
 
 VIDEOS_FOLDER = os.getenv('VIDEOS_FOLDER', 'videos')
 """Константа стокового названия директории с видео."""

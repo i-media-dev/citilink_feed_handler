@@ -30,6 +30,7 @@ def main():
         image_client = FeedImage(filename)
         handler = FeedHandler(filename)
         # image_client.get_images()
+        # image_client.add_frame()
         video_client.create_videos()
     #     handler.processing_and_safe(
     #         NEW_PREFIX,
@@ -37,7 +38,6 @@ def main():
     #         PARAM_FOR_DELETE
     #     )
     # # handler.process_feeds(CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST)
-
     # new_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
     # report_new = FeedReport(new_filenames)
     # report_new.full_outer_join_feeds()

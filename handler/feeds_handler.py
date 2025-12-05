@@ -1,14 +1,16 @@
 import logging
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 
-from handler.constants import FEEDS_FOLDER, NEW_FEEDS_FOLDER
+from handler.constants import (FEEDS_FOLDER, IMAGE_FTP_ADDRESS,
+                               NEW_FEEDS_FOLDER, NEW_IMAGE_FOLDER,
+                               VIDEO_FTP_ADDRESS)
 from handler.decorators import time_of_function
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
 from handler.mixins import FileMixin
 
 setup_logging()
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,11 +25,13 @@ class FeedHandler(FileMixin):
         filename: str,
         feeds_folder: str = FEEDS_FOLDER,
         new_feeds_folder: str = NEW_FEEDS_FOLDER,
+        new_images_folder: str = NEW_IMAGE_FOLDER,
         feeds_list: tuple[str, ...] = FEEDS
     ):
         self.filename = filename
         self.feeds_folder = feeds_folder
         self.new_feeds_folder = new_feeds_folder
+        self.new_images_folder = new_images_folder
         self.feeds_list = feeds_list
         self._root = None
         self._is_modified = False
@@ -228,13 +232,61 @@ class FeedHandler(FileMixin):
             logging.error('Ошибка в remove_non_matching_offers: %s', error)
             raise
 
-    def get_images_for_video(self):
-        """
-        Docstring для get_images_for_video
+    @time_of_function
+    def image_replacement(self):
+        """Метод, подставляющий в фиды новые изображения."""
+        deleted_images = 0
+        input_images = 0
+        try:
+            image_dict = self._get_files_dict(self.new_images_folder)
 
-        :param self: Описание
-        """
-        categories = self.root.findall('.//category')
-        offers = self.root.findall('.//offer')
-        for category in categories:
-            pass
+            offers = self.root.findall('.//offer')
+            for offer in offers:
+                offer_id = offer.get('id')
+
+                if not offer_id:
+                    continue
+
+                if offer_id in image_dict:
+                    pictures = offer.findall('picture')
+                    for picture in pictures:
+                        offer.remove(picture)
+                    deleted_images += len(pictures)
+
+                    for img_file in image_dict[offer_id]:
+                        picture_tag = ET.SubElement(offer, 'picture')
+                        picture_tag.text = f'{IMAGE_FTP_ADDRESS}/{img_file}'
+                        input_images += 1
+
+            self._save_xml(self.root, self.new_feeds_folder, self.filename)
+
+            logging.info(
+                '\nКоличество удаленных изображений - %s'
+                '\nКоличество добавленных изображений - %s',
+                deleted_images,
+                input_images
+            )
+        except Exception as error:
+            logging.error('Ошибка в image_replacement: %s', error)
+            raise
+
+    def add_video(self):
+        input_videos = 0
+        try:
+            image_dict = self._get_files_dict(self.new_images_folder)
+            offers = self.root.findall('.//offer')
+            for offer in offers:
+                offer_id = offer.get('id')
+
+                if not offer_id:
+                    continue
+
+                for video_file in image_dict[offer_id]:
+                    video_tag = ET.SubElement(offer, 'video')
+                    video_tag.text = f'{VIDEO_FTP_ADDRESS}/{video_file}'
+                    input_videos += 1
+        except Exception as error:
+            logging.error(
+                'Неожиданная ошибка при добавлении видео: %s',
+                error
+            )

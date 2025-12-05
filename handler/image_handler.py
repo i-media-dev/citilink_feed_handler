@@ -5,7 +5,9 @@ from pathlib import Path
 import requests
 from PIL import Image
 
-from handler.constants import FEEDS_FOLDER, IMAGE_FOLDER
+from handler.constants import (FEEDS_FOLDER, FRAME_FOLDER, IMAGE_FOLDER,
+                               NAME_OF_FRAME, NEW_IMAGE_FOLDER,
+                               RGB_COLOR_SETTINGS, RGBA_COLOR_SETTINGS)
 from handler.decorators import time_of_function
 from handler.exceptions import DirectoryCreationError, EmptyFeedsListError
 from handler.logging_config import setup_logging
@@ -26,12 +28,17 @@ class FeedImage(FileMixin):
         filename: str,
         feeds_folder: str = FEEDS_FOLDER,
         image_folder: str = IMAGE_FOLDER,
+        frame_folder: str = FRAME_FOLDER,
+        new_image_folder: str = NEW_IMAGE_FOLDER
     ) -> None:
         self.filename = filename
         self.feeds_folder = feeds_folder
         self.image_folder = image_folder
+        self.frame_folder = frame_folder
+        self.new_image_folder = new_image_folder
         self._root = None
         self._existing_image_offers: set[str] = set()
+        self._existing_framed_offers: set[str] = set()
 
     @property
     def root(self):
@@ -97,31 +104,6 @@ class FeedImage(FileMixin):
             return ''
         return f'{offer_id}.{image_format}'
 
-    def _build_offers_set(self, folder: str, target_set: set):
-        """Защищенный метод, строит множество всех существующих офферов."""
-        try:
-            images = self._get_images_list(folder)
-            for imagename in images:
-                offer_image = imagename.split('.')[0]
-                if offer_image:
-                    target_set.add(offer_image)
-
-            logging.info(
-                'Построен кэш для %s файлов',
-                len(target_set)
-            )
-        except EmptyFeedsListError:
-            raise
-        except DirectoryCreationError:
-            raise
-        except Exception as error:
-            logging.error(
-                'Неожиданная ошибка при сборе множества '
-                'скачанных изображений: %s',
-                error
-            )
-            raise
-
     def _save_image(
         self,
         image_data: bytes,
@@ -152,7 +134,7 @@ class FeedImage(FileMixin):
         offers_skipped_existing = 0
 
         try:
-            self._build_offers_set(
+            self._build_set(
                 self.image_folder,
                 self._existing_image_offers
             )
@@ -215,3 +197,80 @@ class FeedImage(FileMixin):
                 'Неожиданная ошибка при получении изображений: %s',
                 error
             )
+
+    @time_of_function
+    def add_frame(self):
+        """Метод форматирует изображения и добавляет рамку."""
+        file_path = self._make_dir(self.image_folder)
+        frame_path = self._make_dir(self.frame_folder)
+        new_file_path = self._make_dir(self.new_image_folder)
+        images_names_list = self._get_files_list(self.image_folder)
+        total_framed_images = 0
+        total_failed_images = 0
+        skipped_images = 0
+
+        try:
+            self._build_set(
+                self.new_image_folder,
+                self._existing_framed_offers
+            )
+        except (DirectoryCreationError, EmptyFeedsListError):
+            logging.warning(
+                'Директория с форматированными изображениями отсутствует. '
+                'Первый запуск'
+            )
+        try:
+            frame = Image.open(frame_path / NAME_OF_FRAME)
+        except Exception as error:
+            logging.error('Не удалось загрузить рамку: %s', error)
+            return
+        try:
+            for image_name in images_names_list:
+                if image_name.split('.')[0] in self._existing_framed_offers:
+                    skipped_images += 1
+                    continue
+                try:
+                    with Image.open(file_path / image_name) as image:
+                        image = image.convert('RGBA')
+                        image.load()
+                        image_width, image_height = image.size
+                except Exception as error:
+                    total_failed_images += 1
+                    logging.error(
+                        'Ошибка загрузки изображения %s: %s',
+                        image_name,
+                        error
+                    )
+                    continue
+
+                canvas_width = image_width + 200
+                canvas_height = image_height + 200
+
+                final_image = Image.new(
+                    'RGB',
+                    (canvas_width, canvas_height),
+                    RGB_COLOR_SETTINGS
+                )
+                final_image.paste(image, (100, 100))
+                final_image.paste(frame, (350, 630), frame)
+                final_image = final_image.convert('RGB')
+                final_image.save(
+                    new_file_path / f'{image_name.split('.')[0]}.png',
+                    'PNG'
+                )
+
+                total_framed_images += 1
+            logging.info(
+                '\nКоличество изображений, к которым добавлена рамка - %s'
+                '\nКоличество уже обрамленных изображений - %s'
+                '\nКоличество изображений обрамленных неудачно - %s',
+                total_framed_images,
+                skipped_images,
+                total_failed_images
+            )
+        except Exception as error:
+            logging.error(
+                'Критическая ошибка в процессе обрамления: %s',
+                error
+            )
+            raise
