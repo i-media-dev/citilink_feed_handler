@@ -10,4 +10,6 @@ services:
       - ./${FEEDS_FOLDER}:/app/${FEEDS_FOLDER}
       - /home/main_ftp_user/projects/citilink/${NEW_FEEDS_FOLDER}:/app/${NEW_FEEDS_FOLDER}
       - /home/main_ftp_user/projects/citilink/${JOIN_FEEDS_FOLDER}:/app/${JOIN_FEEDS_FOLDER}
+      - ./${IMAGE_FOLDER}:/app/${IMAGE_FOLDER}
+      - /home/main_ftp_user/projects/citilink/${NEW_IMAGE_FOLDER}:/app/${NEW_IMAGE_FOLDER}
       - /home/main_ftp_user/projects/citilink/${VIDEOS_FOLDER}:/app/${VIDEOS_FOLDER}
