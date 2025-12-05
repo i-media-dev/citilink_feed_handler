@@ -12,6 +12,7 @@
 *.xml
 *.tmp
 *.mp4
+!frame/*.png
 env/
 __pycache__/
 .env
