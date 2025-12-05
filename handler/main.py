@@ -15,38 +15,43 @@ from handler.video_create import VideoCreater
 @time_of_script
 def main():
     saver = FeedSaver()
-    # saver.save_xml()
+    saver.save_xml()
     filenames = get_filenames_list(FEEDS_FOLDER)
 
     report = FeedReport(filenames)
     db_client = ReportDataBase()
 
-    # data = report.get_offers_report()
+    data = report.get_offers_report()
 
-    # save_to_database(db_client, data)
+    save_to_database(db_client, data)
 
     for filename in filenames:
         video_client = VideoCreater(filename)
         image_client = FeedImage(filename)
-        handler = FeedHandler(filename)
-        # image_client.get_images()
-        # image_client.add_frame()
+        handler_client = FeedHandler(filename)
+        image_client.get_images()
+        image_client.add_frame()
         video_client.create_videos()
-    #     handler.processing_and_safe(
-    #         NEW_PREFIX,
-    #         TAGS_FOR_DELETE,
-    #         PARAM_FOR_DELETE
-    #     )
-    # # handler.process_feeds(CUSTOM_LABEL, UNAVAILABLE_OFFER_ID_LIST)
-    # new_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
-    # report_new = FeedReport(new_filenames)
-    # report_new.full_outer_join_feeds()
-    # report_new.inner_join_feeds()
+        (
+            handler_client
+            .delete_tags(TAGS_FOR_DELETE)
+            .delete_param(PARAM_FOR_DELETE)
+            .replace_images()
+            .add_video()
+            .save(prefix=NEW_PREFIX)
+        )
+    new_filenames = get_filenames_list(NEW_FEEDS_FOLDER)
+    report_new = FeedReport(new_filenames)
+    report_new.full_outer_join_feeds()
+    report_new.inner_join_feeds()
 
-    # for filename in new_filenames:
-    #     handler = FeedHandler(filename, feeds_folder=NEW_FEEDS_FOLDER)
-    #     handler.remove_non_matching_offers(VENDOR_CATEGORY)
-    #     handler.processing_and_safe(AUCTION_PREFIX)
+    for filename in new_filenames:
+        handler = FeedHandler(filename, feeds_folder=NEW_FEEDS_FOLDER)
+        (
+            handler
+            .remove_non_matching_offers(VENDOR_CATEGORY)
+            .save(prefix=AUCTION_PREFIX)
+        )
 
 
 if __name__ == '__main__':

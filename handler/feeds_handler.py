@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from handler.constants import (FEEDS_FOLDER, IMAGE_FTP_ADDRESS,
                                NEW_FEEDS_FOLDER, NEW_IMAGE_FOLDER,
-                               VIDEO_FTP_ADDRESS)
+                               VIDEO_FTP_ADDRESS, VIDEOS_FOLDER)
 from handler.decorators import time_of_function
 from handler.feeds import FEEDS
 from handler.logging_config import setup_logging
@@ -26,23 +26,21 @@ class FeedHandler(FileMixin):
         feeds_folder: str = FEEDS_FOLDER,
         new_feeds_folder: str = NEW_FEEDS_FOLDER,
         new_images_folder: str = NEW_IMAGE_FOLDER,
+        videos_folder: str = VIDEOS_FOLDER,
         feeds_list: tuple[str, ...] = FEEDS
     ):
         self.filename = filename
         self.feeds_folder = feeds_folder
         self.new_feeds_folder = new_feeds_folder
         self.new_images_folder = new_images_folder
+        self.videos_folder = videos_folder
         self.feeds_list = feeds_list
         self._root = None
         self._is_modified = False
 
     def __repr__(self):
         return (
-            f"FeedHandler(filename = '{self.filename}', "
-            f"feeds_folder='{self.feeds_folder}', "
-            f"new_feeds_folder='{self.new_feeds_folder}'), "
-            f"feeds_list='{self.feeds_list}', "
-            f"root='{self._root}'."
+            f"FeedHandler(filename = '{self.filename}'"
         )
 
     @property
@@ -52,43 +50,18 @@ class FeedHandler(FileMixin):
             self._root = self._get_root(self.filename, self.feeds_folder)
         return self._root
 
-    @time_of_function
-    def processing_and_safe(
-        self,
-        new_prefix,
-        tags_to_delete=None,
-        params_to_delete=None
-    ):
-        if tags_to_delete:
-            self._delete_tags(tags_to_delete)
-
-        if params_to_delete:
-            for param in params_to_delete:
-                self._delete_param(param)
-
-        if self._is_modified:
-            prefix = self.filename.split('_')[0]
-            new_filename = self.filename.replace(prefix, new_prefix)
-            self._save_xml(self.root, self.new_feeds_folder, new_filename)
-            self._is_modified = False
-            logging.info('Файл сохранен как %s', new_filename)
-        else:
-            logging.info('Изменений нет, файл не сохранен')
-
-    def _delete_tags(self, tags):
+    def delete_tags(self, tags: tuple):
         """Метод удаляет переданные теги из офферов."""
-        tags_dict_count = defaultdict(int)
+        tags_dict_count: dict = defaultdict(int)
         try:
             offers = self.root.findall('.//offer')
             for offer in offers:
                 for tag in tags:
                     target_tag = offer.find(tag)
-
-                    if target_tag is None:
-                        continue
-                    offer.remove(target_tag)
-                    tags_dict_count[tag] += 1
-                    self._is_modified = True
+                    if target_tag is not None:
+                        offer.remove(target_tag)
+                        tags_dict_count[tag] += 1
+                        self._is_modified = True
 
             logging.info('Удаление тегов в фиде %s:', self.filename)
             logging.info('Всего обработано офферов - %s', len(offers))
@@ -97,12 +70,17 @@ class FeedHandler(FileMixin):
                 self.filename,
                 tags_dict_count
             )
+            return self
 
         except Exception as error:
-            logging.error('Неизвестная ошибка: %s', error)
+            logging.error(
+                'Неизвестная ошибка в delete_tags в файле %s: %s',
+                self.filename,
+                error
+            )
             raise
 
-    def _delete_param(self, param):
+    def delete_param(self, param: str):
         """Метод удаляет переданные параметры из офферов."""
         deleted_params = 0
         try:
@@ -110,7 +88,7 @@ class FeedHandler(FileMixin):
 
             if not target_param:
                 logging.debug('В файле %s не найдено %s', self.filename, param)
-                return
+                return self
 
             for element in target_param:
                 element.attrib.pop(param, None)
@@ -131,134 +109,118 @@ class FeedHandler(FileMixin):
                 self.filename,
                 deleted_params
             )
+            return self
 
         except Exception as error:
-            logging.error('Неизвестная ошибка: %s', error)
+            logging.error(
+                'Неожиданная ошибка в delete_param в файле %s: %s',
+                self.filename,
+                error
+            )
             raise
 
     @time_of_function
-    def remove_non_matching_offers(self, brands_dict: dict):
+    def remove_non_matching_offers(self, vendor_category: dict):
         """
-        Удаляет из фида офферы, которые не
-        соответствуют критериям брендов и категорий
+        Метод фильтрует офферы по брендам и
+        категориям и удаляет неподходящие.
         """
         try:
-            all_categories = {}
             categories = self.root.findall('.//category')
-            for category in categories:
-                cat_id = category.get('id')
-                parent_id = category.get('parentId')
-                all_categories[cat_id] = parent_id
+            all_categories = {
+                category.get('id'): category.get('parentId')
+                for category in categories
+            }
 
-            category_children = defaultdict(list)
-            for cat_id, parent_id in all_categories.items():
+            children_map = defaultdict(list)
+            for category_id, parent_id in all_categories.items():
                 if parent_id:
-                    category_children[parent_id].append(cat_id)
+                    children_map[parent_id].append(category_id)
 
-            def get_all_child_categories(parent_id):
-                children = set()
-                stack = [str(parent_id)]
+            def collect(category_id):
+                result = set()
+                stack = [str(category_id)]
 
                 while stack:
-                    current_parent = stack.pop()
-                    children.add(current_parent)
-                    for child_id in category_children.get(current_parent, []):
-                        if child_id not in children:
-                            children.add(child_id)
-                            stack.append(child_id)
-                return children
+                    cur = stack.pop()
+                    result.add(cur)
+                    for child in children_map.get(cur, []):
+                        if child not in result:
+                            stack.append(child)
+                return result
 
-            all_target_categories: set = set()
+            target: set = set()
 
-            for category_list in brands_dict.values():
-                for category_id in category_list:
+            for vendor_cats in vendor_category.values():
+                for category_id in vendor_cats:
                     if category_id == 'all':
-                        all_target_categories.update(all_categories.keys())
-                        all_target_categories.add(None)
-                    elif isinstance(category_id, int) or category_id.isdigit():
-                        all_target_categories.update(
-                            get_all_child_categories(category_id)
-                        )
+                        target.update(all_categories.keys())
+                        target.add(None)
+                    elif str(category_id).isdigit():
+                        target.update(collect(category_id))
 
             offers = self.root.findall('.//offer')
-            offers_parent = self.root.find('.//offers') or self.root
-            initial_count = len(offers)
-            removed_count = 0
+            parent = self.root.find('.//offers') or self.root
+            removed = 0
 
             for offer in offers[:]:
-                vendor = offer.findtext('vendor')
+                vendor = (offer.findtext('vendor') or '').strip().lower()
                 category_id = offer.findtext('categoryId')
 
-                if vendor is None or category_id is None:
-                    offers_parent.remove(offer)
-                    removed_count += 1
+                if vendor not in vendor_category:
+                    parent.remove(offer)
+                    removed += 1
                     continue
 
-                vendor_lower = vendor.strip().lower()
-                vendor_in_dict = vendor_lower in brands_dict
+                vendor_cats = vendor_category[vendor]
 
-                if not vendor_in_dict:
-                    offers_parent.remove(offer)
-                    removed_count += 1
+                if 'all' in vendor_cats:
                     continue
 
-                vendor_categories = brands_dict[vendor_lower]
+                if category_id not in target:
+                    parent.remove(offer)
+                    removed += 1
 
-                if 'all' in vendor_categories:
-                    continue
-                elif not vendor_categories:
-                    offers_parent.remove(offer)
-                    removed_count += 1
-                    continue
-                else:
-                    category_in_target = category_id in all_target_categories
-                    if not category_in_target:
-                        offers_parent.remove(offer)
-                        removed_count += 1
-
-            remaining_count = initial_count - removed_count
-            logging.info(
-                'В фиде %s удалено %s/%s офферов. Осталось: %s',
-                self.filename,
-                removed_count,
-                initial_count,
-                remaining_count
-            )
-
-            if removed_count > 0:
+            if removed:
                 self._is_modified = True
 
+            logger.info(
+                'Удалено офферов по фильтрам: %s (%s)',
+                removed, self.filename
+            )
+            return self
+
         except Exception as error:
-            logging.error('Ошибка в remove_non_matching_offers: %s', error)
+            logger.error(
+                'Ошибка в remove_non_matching_offers в файле %s: %s',
+                self.filename,
+                error
+            )
             raise
 
     @time_of_function
-    def image_replacement(self):
-        """Метод, подставляющий в фиды новые изображения."""
+    def replace_images(self):
+        """Метод, заменяющий в фидах изображения на обрамленные."""
         deleted_images = 0
         input_images = 0
         try:
             image_dict = self._get_files_dict(self.new_images_folder)
-
             offers = self.root.findall('.//offer')
+
             for offer in offers:
                 offer_id = offer.get('id')
 
-                if not offer_id:
-                    continue
-
-                if offer_id in image_dict:
+                if offer_id and offer_id in image_dict:
                     pictures = offer.findall('picture')
                     for picture in pictures:
                         offer.remove(picture)
                     deleted_images += len(pictures)
-
-                    for img_file in image_dict[offer_id]:
-                        picture_tag = ET.SubElement(offer, 'picture')
-                        picture_tag.text = f'{IMAGE_FTP_ADDRESS}/{img_file}'
-                        input_images += 1
-
-            self._save_xml(self.root, self.new_feeds_folder, self.filename)
+                    picture_tag = ET.SubElement(offer, 'picture')
+                    picture_tag.text = (
+                        f'{IMAGE_FTP_ADDRESS}/{image_dict[offer_id]}'
+                    )
+                    input_images += 1
+                    self._is_modified = True
 
             logging.info(
                 '\nКоличество удаленных изображений - %s'
@@ -266,27 +228,61 @@ class FeedHandler(FileMixin):
                 deleted_images,
                 input_images
             )
+            return self
         except Exception as error:
-            logging.error('Ошибка в image_replacement: %s', error)
+            logging.error(
+                'Неожиданная ошибка в replace_images в файле %s: %s',
+                self.filename,
+                error
+            )
             raise
 
     def add_video(self):
+        """Метод, добавляющий в оффер ссылку на видео в тег <video>."""
         input_videos = 0
         try:
-            image_dict = self._get_files_dict(self.new_images_folder)
+            videos_dict = self._get_files_dict(self.videos_folder)
             offers = self.root.findall('.//offer')
             for offer in offers:
                 offer_id = offer.get('id')
 
-                if not offer_id:
-                    continue
-
-                for video_file in image_dict[offer_id]:
+                if offer_id and offer_id in videos_dict:
                     video_tag = ET.SubElement(offer, 'video')
-                    video_tag.text = f'{VIDEO_FTP_ADDRESS}/{video_file}'
+                    video_tag.text = (
+                        f'{VIDEO_FTP_ADDRESS}/{videos_dict[offer_id]}'
+                    )
                     input_videos += 1
+                    self._is_modified = True
+            logging.info('Количество добавленных видео - %s', input_videos)
+            return self
         except Exception as error:
             logging.error(
-                'Неожиданная ошибка при добавлении видео: %s',
+                'Неожиданная ошибка в add_video в файле %s: %s',
+                self.filename,
                 error
             )
+            raise
+
+    def save(self, prefix: str):
+        """Метод сохраняет файл, если были изменения."""
+        try:
+            if not self._is_modified:
+                logger.info('Изменений нет — файл %s не сохранён',
+                            self.filename)
+                return self
+
+            old_prefix = self.filename.split('_')[0]
+            new_filename = self.filename.replace(old_prefix, prefix)
+
+            self._save_xml(self.root, self.new_feeds_folder, new_filename)
+            logger.info('Файл сохранён как %s', new_filename)
+
+            self._is_modified = False
+            return self
+        except Exception as error:
+            logging.error(
+                'Неожиданная ошибка при сохранении файла %s: %s',
+                self.filename,
+                error
+            )
+            raise

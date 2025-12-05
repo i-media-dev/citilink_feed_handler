@@ -7,7 +7,7 @@ from PIL import Image
 
 from handler.constants import (FEEDS_FOLDER, FRAME_FOLDER, IMAGE_FOLDER,
                                NAME_OF_FRAME, NEW_IMAGE_FOLDER,
-                               RGB_COLOR_SETTINGS, RGBA_COLOR_SETTINGS)
+                               RGB_COLOR_SETTINGS)
 from handler.decorators import time_of_function
 from handler.exceptions import DirectoryCreationError, EmptyFeedsListError
 from handler.logging_config import setup_logging
