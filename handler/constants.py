@@ -22,7 +22,7 @@ TARGET_SECONDS_VIDEO = 3
 TOTAL_SECONDS_VIDEO = 15
 """Суммарное время видео."""
 
-VIDEO_CODEC = 'mp4v'
+VIDEO_CODEC = 'avc1'
 """Кодек видео."""
 
 ATTEMPTION_LOAD_FEED = 3
