@@ -31,9 +31,9 @@ def time_of_script(func):
             result = func(*args, **kwargs)
             status = 'SUCCESS'
             error_type = error_message = None
-        except Exception as e:
+        except Exception as error:
             status = 'ERROR'
-            error_type, error_message = type(e).__name__, str(e)
+            error_type, error_message = type(error).__name__, str(error)
             result = None
 
         exec_time_min = round((time.time() - start_ts) / 60, 2)
