@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     git \
     pkg-config \
     python3-dev python3-pip python3-numpy \
-    libx264-dev \
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
@@ -49,9 +48,8 @@ RUN cmake -D CMAKE_BUILD_TYPE=Release \
 
 RUN make -j$(nproc) && make install
 
-FROM python:3.13-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y \
     ffmpeg \
