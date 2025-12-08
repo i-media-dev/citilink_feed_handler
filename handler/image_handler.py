@@ -255,7 +255,7 @@ class FeedImage(FileMixin):
                 final_image.paste(frame, (350, 630), frame)
                 final_image = final_image.convert('RGB')
                 final_image.save(
-                    new_file_path / f'{image_name.split('.')[0]}.png',
+                    new_file_path / f"{image_name.split('.')[0]}.png",
                     'PNG'
                 )
 
