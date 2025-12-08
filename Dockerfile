@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     libv4l-dev \
     libjpeg-dev libpng-dev libtiff-dev \
     libtbb2 libtbb-dev \
-    libdc1394-22-dev \
+    libdc1394-dev \
     libgtk2.0-dev \
     && apt-get clean
 
