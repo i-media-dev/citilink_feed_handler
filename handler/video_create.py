@@ -176,7 +176,7 @@ class VideoCreater(FileMixin):
                 video_writer.write(target_img)
 
             video_writer.release()
-            logging.info('Создано видео: %s', output_path)
+            # logging.info('Создано видео: %s', output_path)
             return True
 
         except Exception as error:
