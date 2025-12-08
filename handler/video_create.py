@@ -1,6 +1,7 @@
 import logging
 import random
 from collections import defaultdict
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 import cv2
@@ -15,6 +16,11 @@ from handler.logging_config import setup_logging
 from handler.mixins import FileMixin
 
 setup_logging()
+
+
+def _video_worker(args):
+    creator, target_offer, other_offers = args
+    return creator._create_single_video(target_offer, other_offers)
 
 
 class VideoCreater(FileMixin):
@@ -124,6 +130,8 @@ class VideoCreater(FileMixin):
             logging.error('Не удалось создать VideoWriter для %s', output_path)
             return False
 
+        video_writer.set(cv2.VIDEOWRITER_PROP_QUALITY, 1)
+
         try:
             target_frames = self.target_second * self.fps
             other_seconds = self.total_second - (2 * self.target_second)
@@ -196,18 +204,14 @@ class VideoCreater(FileMixin):
                 self._existing_videos_offers
             )
         except (DirectoryCreationError, EmptyFeedsListError):
-            logging.warning(
-                'Директория с видео отсутствует. Первый запуск'
-            )
+            logging.warning('Директория с видео отсутствует. Первый запуск')
         try:
             self._build_set(
                 self.new_images_folder,
                 self._existing_images
             )
         except (DirectoryCreationError, EmptyFeedsListError):
-            logging.error(
-                'Директория с изображениями отсутствует'
-            )
+            logging.error('Директория с изображениями отсутствует')
             raise
         for offer in offers:
             offer_id = str(offer.get('id'))
@@ -218,10 +222,9 @@ class VideoCreater(FileMixin):
                 continue
             if offer_id not in self._existing_images:
                 continue
-            dict_key = (category_id, vendor)
-            cat_ven_img_dict[dict_key].append(offer)
-
-        for (category_id, vendor), offers_in_group in cat_ven_img_dict.items():
+            cat_ven_img_dict[(category_id, vendor)].append(offer)
+        tasks = []
+        for (_, _), offers_in_group in cat_ven_img_dict.items():
 
             for index, target_offer in enumerate(offers_in_group):
                 offer_id = target_offer.get('id')
@@ -234,15 +237,22 @@ class VideoCreater(FileMixin):
                     if i_offer != index
                 ]
 
-                success = self._create_single_video(
-                    target_offer=target_offer,
-                    other_offers=other_offers
-                )
+                tasks.append((self, target_offer, other_offers))
+        if not tasks:
+            logging.info(
+                f'Уже созданных видео - {existing_video}, '
+                f'Создано видео - 0, '
+                f'Ошибок создания видео - 0'
+            )
+            return
+        workers = max(cpu_count() - 1, 2)
+        logging.debug(f'🚀 Параллельная генерация: {workers} процессов')
 
-                if success:
-                    created_video += 1
-                else:
-                    failed_video += 1
+        with Pool(workers) as pool:
+            results = pool.map(_video_worker, tasks)
+        created_video = sum(results)
+        failed_video = len(results) - created_video
+
         logging.info(
             f'Уже созданных видео - {existing_video}, '
             f'Создано видео - {created_video}, '
