@@ -5,7 +5,6 @@ from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 import cv2
-import numpy as np
 
 from handler.constants import (FEEDS_FOLDER, FORMAT_VIDEO, FPS,
                                NEW_FEEDS_FOLDER, NEW_IMAGE_FOLDER,
@@ -62,12 +61,13 @@ class VideoCreater(FileMixin):
             self._root = self._get_root(self.filename, self.feeds_folder)
         return self._root
 
-    def _load_image(self, offer_id: str) -> np.ndarray:
+    def _load_image(self, offer_id: str):
         global GLOBAL_FILES_DICT_CACHE
 
         if GLOBAL_FILES_DICT_CACHE is None:
             GLOBAL_FILES_DICT_CACHE = self._get_files_dict(
-                self.new_images_folder)
+                self.new_images_folder
+            )
 
         image_filename = GLOBAL_FILES_DICT_CACHE.get(offer_id)
         if not image_filename:
