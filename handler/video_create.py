@@ -60,7 +60,7 @@ class VideoCreater(FileMixin):
             self._root = self._get_root(self.filename, self.feeds_folder)
         return self._root
 
-    def _load_image(self, offer_id: str) -> np.ndarray | None:
+    def _load_image(self, offer_id: str) -> np.ndarray:
         """
         Загружает изображение по ID оффера.
         Возвращает numpy array или None если ошибка.
