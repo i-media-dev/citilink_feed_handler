@@ -13,7 +13,7 @@ VIDEO_FTP_ADDRESS = 'https://feeds.i-media.ru/projects/citilink/videos'
 FORMAT_VIDEO = 'mp4'
 """Формат видео."""
 
-FPS = 30
+FPS = 10
 """Кадры в секунду."""
 
 TARGET_SECONDS_VIDEO = 3
