@@ -17,6 +17,8 @@ from handler.mixins import FileMixin
 
 setup_logging()
 
+GLOBAL_FILES_DICT_CACHE = None
+
 
 def _video_worker(args):
     creator, target_offer, other_offers = args
@@ -60,43 +62,20 @@ class VideoCreater(FileMixin):
             self._root = self._get_root(self.filename, self.feeds_folder)
         return self._root
 
-    def _load_image(self, offer_id: str) -> np.ndarray:
-        """
-        Загружает изображение по ID оффера.
-        Возвращает numpy array или None если ошибка.
-        """
-        images_dict = self._get_files_dict(self.new_images_folder)
-        image_filename = images_dict.get(offer_id)
+    def _load_image(self, offer_id: str) -> np.ndarray | None:
+        global GLOBAL_FILES_DICT_CACHE
 
+        if GLOBAL_FILES_DICT_CACHE is None:
+            GLOBAL_FILES_DICT_CACHE = self._get_files_dict(
+                self.new_images_folder)
+
+        image_filename = GLOBAL_FILES_DICT_CACHE.get(offer_id)
         if not image_filename:
-            logging.warning(
-                'Изображение не найдено для offer_id: %s',
-                offer_id
-            )
             return None
 
         image_path = Path(self.new_images_folder) / image_filename
-
-        if not image_path.exists():
-            logging.warning('Изображение не найдено: %s', image_path)
-            return None
-        try:
-            img = cv2.imread(str(image_path))
-
-            if img is None:
-                logging.warning(
-                    'Не удалось загрузить изображение: %s',
-                    image_path
-                )
-                return None
-            return img
-        except Exception as error:
-            logging.error(
-                'Ошибка загрузки изображения %s: %s',
-                offer_id,
-                error
-            )
-            return None
+        image = cv2.imread(str(image_path))
+        return image
 
     def _create_single_video(
         self,
