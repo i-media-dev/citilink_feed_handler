@@ -28,7 +28,7 @@ class VideoCreater(FileMixin):
 
     def __init__(
         self,
-        filename: str,
+        filenames: list,
         feeds_folder: str = FEEDS_FOLDER,
         new_feeds_folder: str = NEW_FEEDS_FOLDER,
         new_images_folder: str = NEW_IMAGE_FOLDER,
@@ -40,7 +40,7 @@ class VideoCreater(FileMixin):
         total_second: int = TOTAL_SECONDS_VIDEO
 
     ):
-        self.filename = filename
+        self.filenames = filenames
         self.feeds_folder = feeds_folder
         self.new_feeds_folder = new_feeds_folder
         self.new_images_folder = new_images_folder
@@ -53,13 +53,6 @@ class VideoCreater(FileMixin):
         self._root = None
         self._existing_videos_offers: set = set()
         self._existing_images: set = set()
-
-    @property
-    def root(self):
-        """Ленивая загрузка корневого элемента."""
-        if self._root is None:
-            self._root = self._get_root(self.filename, self.feeds_folder)
-        return self._root
 
     def _load_image(self, offer_id: str):
         global GLOBAL_FILES_DICT_CACHE
@@ -175,8 +168,6 @@ class VideoCreater(FileMixin):
         created_video = 0
         failed_video = 0
         existing_video = 0
-        offers = self.root.findall('.//offer')
-        cat_ven_img_dict = defaultdict(list)
         try:
             self._build_set(
                 self.videos_folder,
@@ -192,31 +183,37 @@ class VideoCreater(FileMixin):
         except (DirectoryCreationError, EmptyFeedsListError):
             logging.error('Директория с изображениями отсутствует')
             raise
-        for offer in offers:
-            offer_id = str(offer.get('id'))
-            vendor = offer.findtext('vendor')
-            category_id = offer.findtext('categoryId')
-            if offer_id in self._existing_videos_offers:
-                existing_video += 1
-                continue
-            if offer_id not in self._existing_images:
-                continue
-            cat_ven_img_dict[(category_id, vendor)].append(offer)
+
         tasks = []
-        for (_, _), offers_in_group in cat_ven_img_dict.items():
 
-            for index, target_offer in enumerate(offers_in_group):
-                offer_id = target_offer.get('id')
-
+        for filename in self.filenames:
+            root = self._get_root(filename, self.feeds_folder)
+            offers = root.findall('.//offer')
+            cat_ven_img_dict = defaultdict(list)
+            for offer in offers:
+                offer_id = str(offer.get('id'))
+                vendor = offer.findtext('vendor')
+                category_id = offer.findtext('categoryId')
                 if offer_id in self._existing_videos_offers:
+                    existing_video += 1
                     continue
+                if offer_id not in self._existing_images:
+                    continue
+                cat_ven_img_dict[(category_id, vendor)].append(offer)
+            for (_, _), offers_in_group in cat_ven_img_dict.items():
 
-                other_offers = [
-                    offer for i_offer, offer in enumerate(offers_in_group)
-                    if i_offer != index
-                ]
+                for index, target_offer in enumerate(offers_in_group):
+                    offer_id = target_offer.get('id')
 
-                tasks.append((self, target_offer, other_offers))
+                    if offer_id in self._existing_videos_offers:
+                        continue
+
+                    other_offers = [
+                        offer for i_offer, offer in enumerate(offers_in_group)
+                        if i_offer != index
+                    ]
+
+                    tasks.append((self, target_offer, other_offers))
         if not tasks:
             logging.info(
                 f'Уже созданных видео - {existing_video}, '

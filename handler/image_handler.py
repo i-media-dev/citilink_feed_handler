@@ -25,42 +25,21 @@ class FeedImage(FileMixin):
 
     def __init__(
         self,
-        filename: str,
+        filenames: list,
+        images: list,
         feeds_folder: str = FEEDS_FOLDER,
         image_folder: str = IMAGE_FOLDER,
         frame_folder: str = FRAME_FOLDER,
         new_image_folder: str = NEW_IMAGE_FOLDER
     ) -> None:
-        self.filename = filename
+        self.filenames = filenames
+        self.images = images
         self.feeds_folder = feeds_folder
         self.image_folder = image_folder
         self.frame_folder = frame_folder
         self.new_image_folder = new_image_folder
-        self._root = None
         self._existing_image_offers: set[str] = set()
         self._existing_framed_offers: set[str] = set()
-
-    @property
-    def root(self):
-        """Ленивая загрузка корневого элемента."""
-        if self._root is None:
-            self._root = self._get_root(self.filename, self.feeds_folder)
-        return self._root
-
-    def _get_images_list(self, folder_name: str) -> list:
-        """Защищенный метод, возвращает список названий фидов."""
-        folder_path = Path(__file__).parent.parent / folder_name
-        if not folder_path.exists():
-            logging.error(f'Папка {folder_name} не существует')
-            raise DirectoryCreationError(f'Папка {folder_name} не найдена')
-        images_list = [
-            file.name for file in folder_path.iterdir() if file.is_file()
-        ]
-        if not images_list:
-            logging.error('В папке нет файлов')
-            raise EmptyFeedsListError('Нет скачанных файлов')
-        logging.debug(f'Найдены файлы: {images_list}')
-        return images_list
 
     def _get_image_data(self, url: str) -> tuple:
         """
@@ -143,50 +122,54 @@ class FeedImage(FileMixin):
                 'Директория с изображениями отсутствует. Первый запуск'
             )
         try:
-            offers = self.root.findall('.//offer')
+            for filename in self.filenames:
+                root = self._get_root(filename, self.feeds_folder)
+                offers = root.findall('.//offer')
 
-            if not offers:
-                logging.debug('В файле %s не найдено offers', self.filename)
-                return
+                if not offers:
+                    logging.debug('В файле %s не найдено offers', filename)
+                    return
 
-            for offer in offers:
-                offer_id = offer.get('id')
-                total_offers_processed += 1
+                for offer in offers:
+                    offer_id = str(offer.get('id'))
+                    total_offers_processed += 1
 
-                picture = offer.find('picture')
-                if picture is None:
-                    continue
+                    picture = offer.find('picture')
+                    if picture is None:
+                        continue
 
-                offer_image = picture.text
-                if not offer_image:
-                    continue
+                    offer_image = picture.text
+                    if not offer_image:
+                        continue
 
-                offers_with_images += 1
+                    offers_with_images += 1
 
-                if str(offer_id) in self._existing_image_offers:
-                    offers_skipped_existing += 1
-                    continue
+                    if offer_id in self._existing_image_offers:
+                        offers_skipped_existing += 1
+                        continue
 
-                image_data, image_format = self._get_image_data(
-                    offer_image
-                )
-                image_filename = self._get_image_filename(
-                    offer_id,
-                    image_data,
-                    image_format
-                )
-                folder_path = self._make_dir(self.image_folder)
-                self._save_image(
-                    image_data,
-                    folder_path,
-                    image_filename
-                )
-                images_downloaded += 1
+                    image_data, image_format = self._get_image_data(
+                        offer_image
+                    )
+                    image_filename = self._get_image_filename(
+                        offer_id,
+                        image_data,
+                        image_format
+                    )
+                    folder_path = self._make_dir(self.image_folder)
+                    self._save_image(
+                        image_data,
+                        folder_path,
+                        image_filename
+                    )
+                    images_downloaded += 1
             logging.info(
+                '\nВсего обработано фидов - %s'
                 '\nВсего обработано офферов - %s'
                 '\nВсего офферов с подходящими изображениями - %s'
                 '\nВсего изображений скачано - %s'
                 '\nПропущено офферов с уже скачанными изображениями - %s',
+                len(self.filenames),
                 total_offers_processed,
                 offers_with_images,
                 images_downloaded,
@@ -204,7 +187,6 @@ class FeedImage(FileMixin):
         file_path = self._make_dir(self.image_folder)
         frame_path = self._make_dir(self.frame_folder)
         new_file_path = self._make_dir(self.new_image_folder)
-        images_names_list = self._get_files_list(self.image_folder)
         total_framed_images = 0
         total_failed_images = 0
         skipped_images = 0
@@ -225,7 +207,7 @@ class FeedImage(FileMixin):
             logging.error('Не удалось загрузить рамку: %s', error)
             return
         try:
-            for image_name in images_names_list:
+            for image_name in self.images:
                 if image_name.split('.')[0] in self._existing_framed_offers:
                     skipped_images += 1
                     continue
@@ -261,9 +243,11 @@ class FeedImage(FileMixin):
 
                 total_framed_images += 1
             logging.info(
+                '\nВсего изображений - %s'
                 '\nКоличество изображений, к которым добавлена рамка - %s'
                 '\nКоличество уже обрамленных изображений - %s'
                 '\nКоличество изображений обрамленных неудачно - %s',
+                len(self.images),
                 total_framed_images,
                 skipped_images,
                 total_failed_images
