@@ -1,5 +1,4 @@
 # import logging
-import copy
 from collections import defaultdict
 from datetime import datetime as dt
 
@@ -149,7 +148,7 @@ class FeedReport(FileMixin):
                 offer_id = offer.get('id')
                 if offer_id:
                     offer_counts[offer_id] += 1
-                    all_offers[offer_id] = copy.deepcopy(offer)
+                    all_offers[offer_id] = offer
         return offer_counts, all_offers
 
     @time_of_function
