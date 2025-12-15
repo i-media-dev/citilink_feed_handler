@@ -54,8 +54,8 @@ def main():
             handler_client
             .delete_tags(TAGS_FOR_DELETE)
             .delete_param(PARAM_FOR_DELETE)
-            .replace_images()
-            .add_video()
+            # .replace_images()
+            # .add_video()
             .save(prefix=NEW_PREFIX)
         )
     new_filenames = get_filenames_list(NEW_FEEDS_FOLDER)

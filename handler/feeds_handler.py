@@ -174,6 +174,10 @@ class FeedHandler(FileMixin):
 
                 vendor_cats = vendor_category[vendor]
 
+                if not vendor_cats:
+                    parent.remove(offer)
+                    removed += 1
+
                 if 'all' in vendor_cats:
                     continue
 
