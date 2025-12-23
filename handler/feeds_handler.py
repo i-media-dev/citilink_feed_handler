@@ -270,13 +270,13 @@ class FeedHandler(FileMixin):
     def save(self, prefix: str):
         """Метод сохраняет файл, если были изменения."""
         try:
-            if not self._is_modified:
-                logger.info('Изменений нет — файл %s не сохранён',
-                            self.filename)
-                return self
-
             old_prefix = self.filename.split('_')[0]
             new_filename = self.filename.replace(old_prefix, prefix)
+
+            if not self._is_modified:
+                self._save_xml(self.root, self.new_feeds_folder, new_filename)
+                logger.info('Файл обновлен без изменений')
+                return self
 
             self._save_xml(self.root, self.new_feeds_folder, new_filename)
             logger.info('Файл сохранён как %s', new_filename)
