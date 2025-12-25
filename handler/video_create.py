@@ -104,33 +104,35 @@ class VideoCreater(FileMixin):
 
         try:
             target_frames = self.target_second * self.fps
-            other_seconds = self.total_second - (2 * self.target_second)
-            total_other_frames = other_seconds * self.fps
+            middle_seconds = self.total_second - self.target_second * 2
+            total_middle_frames = middle_seconds * self.fps
 
             for _ in range(target_frames):
                 video_writer.write(target_img)
 
-            other_imgs = [
-                cv2.resize(self._load_image(offer.get('id')), (width, height))
-                for offer in other_offers
-                if self._load_image(offer.get('id')) is not None
-            ]
+            other_imgs = []
+            for offer in other_offers:
+                img = self._load_image(offer.get('id'))
+                if img is not None:
+                    other_imgs.append(cv2.resize(img, (width, height)))
 
             if other_imgs:
-                if len(other_imgs) > other_seconds:
-                    other_imgs = random.sample(other_imgs, other_seconds)
+                if len(other_imgs) > middle_seconds:
+                    other_imgs = random.sample(other_imgs, middle_seconds)
 
-                frames_per_other = total_other_frames // len(other_imgs)
-                remaining_frames = total_other_frames % len(other_imgs)
+                items_count = len(other_imgs)
+                seconds_per_item = middle_seconds // items_count
+                extra_seconds = middle_seconds % items_count
 
-                for img in other_imgs:
-                    for _ in range(frames_per_other):
+                for idx, img in enumerate(other_imgs):
+                    show_seconds = seconds_per_item + \
+                        (1 if idx < extra_seconds else 0)
+                    frames_to_write = show_seconds * self.fps
+
+                    for _ in range(frames_to_write):
                         video_writer.write(img)
-
-                for i in range(remaining_frames):
-                    video_writer.write(other_imgs[i % len(other_imgs)])
             else:
-                for _ in range(total_other_frames):
+                for _ in range(total_middle_frames):
                     video_writer.write(target_img)
 
             for _ in range(target_frames):
@@ -140,14 +142,10 @@ class VideoCreater(FileMixin):
             return True
 
         except Exception as error:
-            logging.error(
-                'Ошибка при создании видео для %s: %s',
-                offer_id,
-                error
-            )
             video_writer.release()
             if output_path.exists():
                 output_path.unlink()
+            logging.error('Ошибка видео %s: %s', offer_id, error)
             return False
 
     def create_videos(self):
