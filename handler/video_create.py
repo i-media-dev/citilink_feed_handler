@@ -1,6 +1,8 @@
+import os
 import logging
 import random
 from collections import defaultdict
+import multiprocessing
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
@@ -17,6 +19,9 @@ from handler.mixins import FileMixin
 setup_logging()
 
 GLOBAL_FILES_DICT_CACHE = None
+
+logging.info('os.cpu_count():', os.cpu_count())
+logging.info('multiprocessing.cpu_count():', multiprocessing.cpu_count())
 
 
 def _video_worker(args):
@@ -102,7 +107,7 @@ class VideoCreater(FileMixin):
             logging.error('Не удалось создать VideoWriter для %s', output_path)
             return False
 
-        video_writer.set(cv2.VIDEOWRITER_PROP_QUALITY, 1)
+        # video_writer.set(cv2.VIDEOWRITER_PROP_QUALITY, 1)
 
         try:
             target_frames = self.target_second * self.fps
