@@ -1,8 +1,6 @@
-import os
 import logging
 import random
 from collections import defaultdict
-import multiprocessing
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
@@ -19,9 +17,6 @@ from handler.mixins import FileMixin
 setup_logging()
 
 GLOBAL_FILES_DICT_CACHE = None
-
-logging.info('os.cpu_count():', os.cpu_count())
-logging.info('multiprocessing.cpu_count():', multiprocessing.cpu_count())
 
 
 def _video_worker(args):
@@ -107,53 +102,41 @@ class VideoCreater(FileMixin):
             logging.error('Не удалось создать VideoWriter для %s', output_path)
             return False
 
-        # video_writer.set(cv2.VIDEOWRITER_PROP_QUALITY, 1)
-
         try:
             target_frames = self.target_second * self.fps
             other_seconds = self.total_second - (2 * self.target_second)
+            total_other_frames = other_seconds * self.fps
 
             for _ in range(target_frames):
                 video_writer.write(target_img)
 
-            if other_offers:
-                other_imgs = []
-                for offer in other_offers:
-                    img = self._load_image(offer.get('id'))
-                    if img is not None:
-                        img_resized = cv2.resize(img, (width, height))
-                        other_imgs.append(img_resized)
+            other_imgs = [
+                cv2.resize(self._load_image(offer.get('id')), (width, height))
+                for offer in other_offers
+                if self._load_image(offer.get('id')) is not None
+            ]
 
-                if other_imgs:
-                    total_other_frames = other_seconds * self.fps
-                    max_others_to_show = other_seconds
-                    if len(other_imgs) > max_others_to_show:
-                        other_imgs = random.sample(
-                            other_imgs, max_others_to_show)
+            if other_imgs:
+                if len(other_imgs) > other_seconds:
+                    other_imgs = random.sample(other_imgs, other_seconds)
 
-                    frames_per_other = total_other_frames // len(other_imgs)
-                    remaining_frames = total_other_frames % len(other_imgs)
+                frames_per_other = total_other_frames // len(other_imgs)
+                remaining_frames = total_other_frames % len(other_imgs)
 
-                    for img in other_imgs:
-                        for _ in range(frames_per_other):
-                            video_writer.write(img)
+                for img in other_imgs:
+                    for _ in range(frames_per_other):
+                        video_writer.write(img)
 
-                    if remaining_frames > 0:
-                        for i in range(remaining_frames):
-                            video_writer.write(other_imgs[i % len(other_imgs)])
-
-                else:
-                    for _ in range(other_seconds * self.fps):
-                        video_writer.write(target_img)
+                for i in range(remaining_frames):
+                    video_writer.write(other_imgs[i % len(other_imgs)])
             else:
-                for _ in range(other_seconds * self.fps):
+                for _ in range(total_other_frames):
                     video_writer.write(target_img)
 
             for _ in range(target_frames):
                 video_writer.write(target_img)
 
             video_writer.release()
-            # logging.info('Создано видео: %s', output_path)
             return True
 
         except Exception as error:
@@ -163,10 +146,8 @@ class VideoCreater(FileMixin):
                 error
             )
             video_writer.release()
-
             if output_path.exists():
                 output_path.unlink()
-
             return False
 
     def create_videos(self):
