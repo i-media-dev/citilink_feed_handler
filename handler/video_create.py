@@ -151,7 +151,7 @@ class VideoCreater(FileMixin):
     def create_videos(self):
         created_video = 0
         failed_video = 0
-        existing_video = 0
+        existing_videos = set()
         try:
             self._build_set(
                 self.videos_folder,
@@ -179,7 +179,7 @@ class VideoCreater(FileMixin):
                 vendor = offer.findtext('vendor')
                 category_id = offer.findtext('categoryId')
                 if offer_id in self._existing_videos_offers:
-                    existing_video += 1
+                    existing_videos.add(offer_id)
                     continue
                 if offer_id not in self._existing_images:
                     continue
@@ -200,13 +200,12 @@ class VideoCreater(FileMixin):
                     tasks.append((self, target_offer, other_offers))
         if not tasks:
             logging.info(
-                f'Уже созданных видео - {existing_video}, '
-                f'Создано видео - 0, '
-                f'Ошибок создания видео - 0'
+                'Уже созданных видео - %s, создано видео - 0, '
+                'ошибок создания видео - 0',
+                len(existing_videos)
             )
             return
         workers = min(3, cpu_count() - 1)
-        logging.debug(f'🚀 Параллельная генерация: {workers} процессов')
 
         with Pool(workers) as pool:
             results = pool.map(_video_worker, tasks)
@@ -214,7 +213,9 @@ class VideoCreater(FileMixin):
         failed_video = len(results) - created_video
 
         logging.info(
-            f'Уже созданных видео - {existing_video}, '
-            f'Создано видео - {created_video}, '
-            f'Ошибок создания видео - {failed_video}'
+            'Уже созданных видео - %s, создано видео - %s, '
+            'ошибок создания видео - %s',
+            len(existing_videos),
+            created_video,
+            failed_video
         )
