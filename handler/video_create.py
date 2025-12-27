@@ -205,7 +205,7 @@ class VideoCreater(FileMixin):
                 f'Ошибок создания видео - 0'
             )
             return
-        workers = max(cpu_count() - 1, 2)
+        workers = min(3, cpu_count() - 1)
         logging.debug(f'🚀 Параллельная генерация: {workers} процессов')
 
         with Pool(workers) as pool:
