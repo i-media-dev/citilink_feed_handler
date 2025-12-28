@@ -270,6 +270,8 @@ class FeedHandler(FileMixin):
     def save(self, prefix: str):
         """Метод сохраняет файл, если были изменения."""
         try:
+            if 'retailmedia_auction' in self.filename:
+                return self
             old_prefix = self.filename.split('_')[0]
             new_filename = self.filename.replace(old_prefix, prefix)
 
