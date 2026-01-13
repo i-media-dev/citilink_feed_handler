@@ -1,7 +1,6 @@
 import logging
 import random
 from collections import defaultdict
-from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 import cv2
@@ -15,13 +14,8 @@ from handler.logging_config import setup_logging
 from handler.mixins import FileMixin
 
 setup_logging()
-
+cv2.setNumThreads(0)
 GLOBAL_FILES_DICT_CACHE = None
-
-
-def _video_worker(args):
-    creator, target_offer, other_offers = args
-    return creator._create_single_video(target_offer, other_offers)
 
 
 class VideoCreater(FileMixin):
@@ -197,7 +191,7 @@ class VideoCreater(FileMixin):
                         if i_offer != index
                     ]
 
-                    tasks.append((self, target_offer, other_offers))
+                    tasks.append((target_offer, other_offers))
         if not tasks:
             logging.info(
                 'Уже созданных видео - %s, создано видео - 0, '
@@ -205,10 +199,12 @@ class VideoCreater(FileMixin):
                 len(existing_videos)
             )
             return
-        workers = min(3, cpu_count() - 1)
+        results = []
 
-        with Pool(workers) as pool:
-            results = pool.map(_video_worker, tasks)
+        for target_offer, other_offers in tasks:
+            result = self._create_single_video(target_offer, other_offers)
+            results.append(result)
+
         created_video = sum(results)
         failed_video = len(results) - created_video
 
