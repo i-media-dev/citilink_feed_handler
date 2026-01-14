@@ -1,5 +1,6 @@
 import logging
 import random
+import shutil
 from collections import defaultdict
 from pathlib import Path
 
@@ -80,20 +81,20 @@ class VideoCreater(FileMixin):
 
         height, width = target_img.shape[:2]
 
-        output_dir = Path(self.videos_folder)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        local_dir = Path('/tmp/videos')
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_path = local_dir / f'{offer_id}.{self.video_format}'
 
-        output_path = output_dir / f'{offer_id}.{self.video_format}'
         fourcc = cv2.VideoWriter_fourcc(*self.video_codec)
         video_writer = cv2.VideoWriter(
-            str(output_path),
+            str(local_path),
             fourcc,
             self.fps,
             (width, height)
         )
 
         if not video_writer.isOpened():
-            logging.error('Не удалось создать VideoWriter для %s', output_path)
+            logging.error('Не удалось создать VideoWriter для %s', local_path)
             return False
 
         try:
@@ -133,14 +134,20 @@ class VideoCreater(FileMixin):
                 video_writer.write(target_img)
 
             video_writer.release()
+            ftp_path = Path(self.videos_folder) / \
+                f'{offer_id}.{self.video_format}'
+            shutil.move(str(local_path), str(ftp_path))
             return True
 
         except Exception as error:
-            video_writer.release()
-            if output_path.exists():
-                output_path.unlink()
+            if local_path.exists():
+                local_path.unlink()
             logging.error('Ошибка видео %s: %s', offer_id, error)
             return False
+
+        finally:
+            if video_writer.isOpened():
+                video_writer.release()
 
     def create_videos(self):
         created_video = 0
