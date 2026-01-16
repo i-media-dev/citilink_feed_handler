@@ -1,6 +1,7 @@
 import logging
 import random
 import shutil
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -148,28 +149,21 @@ class VideoCreater(FileMixin):
         finally:
             if video_writer.isOpened():
                 video_writer.release()
+            time.sleep(0.01)
 
     def create_videos(self):
         created_video = 0
         failed_video = 0
         existing_videos = set()
         try:
-            self._build_set(
-                self.videos_folder,
-                self._existing_videos_offers
-            )
+            self._build_set(self.videos_folder, self._existing_videos_offers)
         except (DirectoryCreationError, EmptyFeedsListError):
             logging.warning('Директория с видео отсутствует. Первый запуск')
         try:
-            self._build_set(
-                self.new_images_folder,
-                self._existing_images
-            )
+            self._build_set(self.new_images_folder, self._existing_images)
         except (DirectoryCreationError, EmptyFeedsListError):
             logging.error('Директория с изображениями отсутствует')
             raise
-
-        tasks = []
 
         for filename in self.filenames:
             root = self._get_root(filename, self.feeds_folder)
@@ -185,8 +179,8 @@ class VideoCreater(FileMixin):
                 if offer_id not in self._existing_images:
                     continue
                 cat_ven_img_dict[(category_id, vendor)].append(offer)
-            for (_, _), offers_in_group in cat_ven_img_dict.items():
 
+            for offers_in_group in cat_ven_img_dict.values():
                 for index, target_offer in enumerate(offers_in_group):
                     offer_id = target_offer.get('id')
 
@@ -194,31 +188,16 @@ class VideoCreater(FileMixin):
                         continue
 
                     other_offers = [
-                        offer for i_offer, offer in enumerate(offers_in_group)
-                        if i_offer != index
+                        offer for i, offer in enumerate(offers_in_group)
+                        if i != index
                     ]
 
-                    tasks.append((target_offer, other_offers))
-        if not tasks:
-            logging.info(
-                'Уже созданных видео - %s, создано видео - 0, '
-                'ошибок создания видео - 0',
-                len(existing_videos)
-            )
-            return
-        results = []
+                    ok = self._create_single_video(target_offer, other_offers)
 
-        for target_offer, other_offers in tasks:
-            result = self._create_single_video(target_offer, other_offers)
-            results.append(result)
-
-        created_video = sum(results)
-        failed_video = len(results) - created_video
-
-        logging.info(
-            'Уже созданных видео - %s, создано видео - %s, '
-            'ошибок создания видео - %s',
-            len(existing_videos),
-            created_video,
-            failed_video
-        )
+                    if ok:
+                        created_video += 1
+                        self._existing_videos_offers.add(offer_id)
+                    else:
+                        failed_video += 1
+        logging.info('Успешно созданных видео - %s', created_video)
+        logging.info('Ошибок создания видео - %s', failed_video)
